@@ -1,26 +1,156 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL,GRAD,opsz@100..700,0..1,-50..200,20..48');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #111318;
+  --on-background: #e2e2e8;
+  --surface: #111318;
+  --surface-container-highest: #333539;
+  --on-surface: #e2e2e8;
+  --on-surface-variant: #d4c0d7;
+  --primary: #ebb2ff;
+  --primary-container: #bc13fe;
+  --on-primary-container: #ffffff;
+  --secondary: #e6feff;
+  --secondary-container: #00f4fe;
+  --on-secondary-container: #006c71;
+  --error: #ffb4ab;
+  --success: #00fbfb;
+  
+  --font-headline: 'Sora', sans-serif;
+  --font-body: 'Inter', sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--background);
+  color: var(--on-surface);
+  font-family: var(--font-body);
+  overflow-x: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Animations */
+@keyframes pulse-neon {
+  0%, 100% { box-shadow: 0 0 15px rgba(188, 19, 254, 0.4), 0 0 30px rgba(188, 19, 254, 0.2); }
+  50% { box-shadow: 0 0 30px rgba(188, 19, 254, 0.8), 0 0 50px rgba(188, 19, 254, 0.4); }
+}
+
+@keyframes fadeInUp {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.entrance-anim {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+
+/* Utilities */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+.glass-panel {
+  background: rgba(17, 19, 24, 0.1);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.glass-card {
+  background: rgba(51, 53, 57, 0.1);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 32px;
+}
+
+.header {
+  position: fixed;
+  top: 0;
+  width: 100%;
+  height: 64px;
+  z-index: 50;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(17, 19, 24, 0.1);
+  backdrop-filter: blur(20px);
+}
+
+.app-title {
+  font-family: var(--font-headline);
+  font-weight: 800;
+  font-size: 24px;
+  color: var(--primary);
+  text-shadow: 0 0 10px rgba(235, 178, 255, 0.4);
+  margin: 0;
+  letter-spacing: -1px;
+}
+
+/* Inputs */
+input[type=number]::-webkit-inner-spin-button, 
+input[type=number]::-webkit-outer-spin-button { 
+  -webkit-appearance: none; 
+  margin: 0; 
+}
+
+.input-field {
+  width: 100%;
+  height: 80px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--primary);
+  font-family: var(--font-headline);
+  font-size: 36px;
+  text-align: center;
+  transition: all 0.3s;
+  outline: none;
+  letter-spacing: 0.3em;
+}
+.input-field:focus {
+  border-color: var(--secondary-container);
+  box-shadow: 0 0 20px rgba(0, 244, 254, 0.2);
+}
+
+.btn-primary {
+  width: 100%;
+  height: 64px;
+  background: var(--primary-container);
+  color: var(--on-primary-container);
+  border: none;
+  border-radius: 12px;
+  font-family: var(--font-headline);
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  animation: pulse-neon 2s infinite ease-in-out;
+}
+.btn-primary:hover {
+  filter: brightness(1.1);
+}
+.btn-primary:active {
+  transform: scale(0.98);
 }
