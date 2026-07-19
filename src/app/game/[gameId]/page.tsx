@@ -17,6 +17,10 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   const [attempts, setAttempts] = useState(0);
   const [hasWon, setHasWon] = useState(false);
 
+  // New state variables for the manual hint flow
+  const [currentGuessState, setCurrentGuessState] = useState("");
+  const [hintState, setHintState] = useState("");
+
   useEffect(() => {
     // Check if game exists
     const checkGame = async () => {
@@ -46,19 +50,31 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
         },
         (payload) => {
           const { current_guess, hint } = payload.new;
-          if (current_guess && hint) {
-            setAttempts((prev) => prev + 1);
-            if (hint === 'correct') {
-              setFeedback(`Player guessed ${current_guess}: Correct!`);
-              setFeedbackColor("var(--success)");
-              setHasWon(true);
-            } else if (hint === 'more') {
-              setFeedback(`Player guessed ${current_guess}: Too low! Guess higher.`);
-              setFeedbackColor("var(--error)");
-            } else if (hint === 'less') {
-              setFeedback(`Player guessed ${current_guess}: Too high! Guess lower.`);
-              setFeedbackColor("var(--error)");
+          
+          if (current_guess) setCurrentGuessState(current_guess);
+          if (hint) setHintState(hint);
+
+          if (hint === 'pending') {
+            if (!isHost) {
+              setFeedback("Waiting for Player 1 to respond...");
+              setFeedbackColor("var(--foreground)");
+            } else {
+              setFeedback("Player 2 has made a guess!");
+              setFeedbackColor("var(--primary)");
             }
+          } else if (hint === 'correct') {
+            if (!isHost) setAttempts((prev) => prev + 1);
+            setFeedback(isHost ? "You indicated CORRECT!" : `Player 1 says ${current_guess} is Correct!`);
+            setFeedbackColor("var(--success)");
+            setHasWon(true);
+          } else if (hint === 'more') {
+            if (!isHost) setAttempts((prev) => prev + 1);
+            setFeedback(isHost ? "You indicated MORE." : `Player 1 says ${current_guess} is too low! Guess MORE.`);
+            setFeedbackColor("var(--error)");
+          } else if (hint === 'less') {
+            if (!isHost) setAttempts((prev) => prev + 1);
+            setFeedback(isHost ? "You indicated LESS." : `Player 1 says ${current_guess} is too high! Guess LESS.`);
+            setFeedbackColor("var(--error)");
           }
         }
       )
@@ -67,11 +83,11 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [gameId]);
+  }, [gameId, isHost]);
 
   const handleSubmitGuess = async () => {
     if (!guess || isNaN(Number(guess))) return;
-    if (isHost) return; // Host shouldn't guess
+    if (isHost) return; 
 
     try {
       const response = await fetch('/api/games/guess', {
@@ -84,10 +100,34 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
       if (data.error) {
         setFeedback(data.error);
         setFeedbackColor("var(--error)");
+      } else {
+        setFeedback("Waiting for Player 1 to respond...");
+        setFeedbackColor("var(--foreground)");
+        setHintState('pending');
+        setCurrentGuessState(guess);
       }
       setGuess("");
     } catch (err) {
       setFeedback("Failed to submit guess.");
+      setFeedbackColor("var(--error)");
+    }
+  };
+
+  const handleSendHint = async (hintResponse: string) => {
+    try {
+      const response = await fetch('/api/games/hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ gameId, hint: hintResponse })
+      });
+      const data = await response.json();
+
+      if (data.error) {
+        setFeedback(data.error);
+        setFeedbackColor("var(--error)");
+      }
+    } catch (err) {
+      setFeedback("Failed to send hint.");
       setFeedbackColor("var(--error)");
     }
   };
@@ -126,10 +166,12 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
              </div>
           )}
 
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{ fontSize: '0.875rem', color: 'var(--foreground)', opacity: 0.6, marginBottom: '0.25rem' }}>ATTEMPT</div>
-            <div style={{ fontSize: '3rem', fontWeight: 700, color: 'var(--foreground)' }}>{attempts}</div>
-          </div>
+          {!isHost && (
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--foreground)', opacity: 0.6, marginBottom: '0.25rem' }}>ATTEMPT</div>
+              <div style={{ fontSize: '3rem', fontWeight: 700, color: 'var(--foreground)' }}>{attempts}</div>
+            </div>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {!isHost && (
@@ -139,17 +181,35 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                 type="text"
                 value={guess}
                 onChange={(e) => setGuess(e.target.value.replace(/\D/g, ''))}
-                disabled={hasWon}
+                disabled={hasWon || hintState === 'pending'}
               />
             )}
             
             <div style={{ minHeight: '1.5rem', color: feedbackColor, fontWeight: 600, fontSize: '1rem' }}>
               {feedback || (isHost ? "Waiting for Player 2 to guess..." : "")}
             </div>
+
+            {/* Host Hint Controls */}
+            {isHost && hintState === 'pending' && currentGuessState && (
+              <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <p style={{ fontWeight: 'bold', marginBottom: '1rem' }}>Player 2 guessed: {currentGuessState}</p>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                  <button className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }} onClick={() => handleSendHint('less')}>
+                    Less
+                  </button>
+                  <button className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }} onClick={() => handleSendHint('more')}>
+                    More
+                  </button>
+                  <button className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '1rem', background: 'var(--success)' }} onClick={() => handleSendHint('correct')}>
+                    Correct
+                  </button>
+                </div>
+              </div>
+            )}
             
             {!hasWon ? (
               !isHost && (
-                <button className="btn-primary" onClick={handleSubmitGuess} disabled={!guess}>
+                <button className="btn-primary" onClick={handleSubmitGuess} disabled={!guess || hintState === 'pending'}>
                   Submit Guess
                 </button>
               )
