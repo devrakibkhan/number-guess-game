@@ -42,7 +42,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
           event: 'UPDATE',
           schema: 'public',
           table: 'games',
-          filter: `game_id=eq.${gameId}`
+          filter: `id=eq.${gameId}`
         },
         (payload) => {
           const { current_guess, hint } = payload.new;

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
     const { data: game, error: fetchError } = await supabase
       .from('games')
       .select('id, secret_number')
-      .eq('game_id', gameId)
+      .eq('id', gameId)
       .single();
 
     if (fetchError || !game) {

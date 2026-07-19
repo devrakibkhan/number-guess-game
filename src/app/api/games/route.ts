@@ -9,22 +9,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid secret number' }, { status: 400 });
     }
 
-    // Generate a simple random ID for the game
-    const gameId = Math.random().toString(36).substring(2, 8);
-    
     // Insert into Supabase
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('games')
       .insert([
-        { game_id: gameId, secret_number: secret }
-      ]);
+        { secret_number: String(secret) }
+      ])
+      .select('id')
+      .single();
 
-    if (error) {
+    if (error || !data) {
       console.error("Supabase insert error:", error);
       return NextResponse.json({ error: 'Failed to create game' }, { status: 500 });
     }
 
-    return NextResponse.json({ gameId });
+    return NextResponse.json({ gameId: data.id });
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
@@ -41,7 +40,7 @@ export async function GET(request: Request) {
   const { data, error } = await supabase
     .from('games')
     .select('id')
-    .eq('game_id', gameId)
+    .eq('id', gameId)
     .single();
 
   if (error || !data) {
