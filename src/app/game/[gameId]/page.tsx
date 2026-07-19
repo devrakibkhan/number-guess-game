@@ -20,6 +20,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   // New state variables for the manual hint flow
   const [currentGuessState, setCurrentGuessState] = useState("");
   const [hintState, setHintState] = useState("");
+  const [secretNumberState, setSecretNumberState] = useState("");
 
   useEffect(() => {
     // Check if game exists
@@ -49,8 +50,9 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
           filter: `id=eq.${gameId}`
         },
         (payload) => {
-          const { current_guess, hint } = payload.new;
+          const { current_guess, hint, secret_number } = payload.new;
           
+          if (secret_number) setSecretNumberState(secret_number);
           if (current_guess) setCurrentGuessState(current_guess);
           if (hint) setHintState(hint);
 
@@ -64,7 +66,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
             }
           } else if (hint === 'correct') {
             if (!isHost) setAttempts((prev) => prev + 1);
-            setFeedback(isHost ? "You indicated CORRECT!" : `Player 1 says ${current_guess} is Correct!`);
+            setFeedback(isHost ? "You indicated CORRECT!" : `You won! The secret number was ${secret_number || current_guess}!`);
             setFeedbackColor("var(--success)");
             setHasWon(true);
           } else if (hint === 'more') {
@@ -194,12 +196,16 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
               <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--background)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <p style={{ fontWeight: 'bold', marginBottom: '1rem' }}>Player 2 guessed: {currentGuessState}</p>
                 <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                  <button className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }} onClick={() => handleSendHint('less')}>
-                    Less
-                  </button>
-                  <button className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }} onClick={() => handleSendHint('more')}>
-                    More
-                  </button>
+                  {currentGuessState !== secretNumberState && (
+                    <>
+                      <button className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }} onClick={() => handleSendHint('less')}>
+                        Less
+                      </button>
+                      <button className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '1rem' }} onClick={() => handleSendHint('more')}>
+                        More
+                      </button>
+                    </>
+                  )}
                   <button className="btn-primary" style={{ flex: 1, padding: '0.5rem', fontSize: '1rem', background: 'var(--success)' }} onClick={() => handleSendHint('correct')}>
                     Correct
                   </button>
