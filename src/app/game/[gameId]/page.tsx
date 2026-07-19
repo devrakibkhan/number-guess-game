@@ -11,7 +11,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   
   const [guess, setGuess] = useState("");
   const [feedback, setFeedback] = useState("");
-  const [feedbackColor, setFeedbackColor] = useState("var(--on-surface-variant)");
+  const [feedbackColor, setFeedbackColor] = useState("var(--foreground)");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [attempts, setAttempts] = useState(0);
@@ -49,14 +49,14 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
           if (current_guess && hint) {
             setAttempts((prev) => prev + 1);
             if (hint === 'correct') {
-              setFeedback(`Player guessed ${current_guess}: Access Granted!`);
+              setFeedback(`Player guessed ${current_guess}: Correct!`);
               setFeedbackColor("var(--success)");
               setHasWon(true);
             } else if (hint === 'more') {
-              setFeedback(`Player guessed ${current_guess}: Too low! Shift higher.`);
+              setFeedback(`Player guessed ${current_guess}: Too low! Guess higher.`);
               setFeedbackColor("var(--error)");
             } else if (hint === 'less') {
-              setFeedback(`Player guessed ${current_guess}: Too high! Shift lower.`);
+              setFeedback(`Player guessed ${current_guess}: Too high! Guess lower.`);
               setFeedbackColor("var(--error)");
             }
           }
@@ -70,7 +70,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   }, [gameId]);
 
   const handleSubmitGuess = async () => {
-    if (!guess || guess.length !== 4) return;
+    if (!guess || isNaN(Number(guess))) return;
     if (isHost) return; // Host shouldn't guess
 
     try {
@@ -85,8 +85,6 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
         setFeedback(data.error);
         setFeedbackColor("var(--error)");
       }
-      // Note: We don't update attempts/feedback immediately here if we want to rely on the Realtime event.
-      // But since Realtime handles it, the UI will update for both players via the subscription!
       setGuess("");
     } catch (err) {
       setFeedback("Failed to submit guess.");
@@ -95,7 +93,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   };
 
   if (loading) {
-    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--primary)' }}>INITIALIZING LINK...</div>;
+    return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: 'var(--primary)' }}>Loading game...</div>;
   }
 
   if (error) {
@@ -105,79 +103,64 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   return (
     <>
       <header className="header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>grid_view</span>
-          <h1 className="app-title">CIPHER_SHIFT</h1>
-        </div>
+        <h1 className="app-title">Number Guessing Game</h1>
         {isHost && (
-          <div style={{ padding: '8px 16px', background: 'rgba(255,255,255,0.1)', borderRadius: '8px', border: '1px solid var(--primary)', color: 'var(--primary)', fontSize: '12px' }}>
+          <div style={{ padding: '4px 8px', background: 'var(--border)', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
             HOST VIEW
           </div>
         )}
       </header>
 
-      <main style={{ position: 'relative', zIndex: 10, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 24px' }}>
-        <div className="glass-card entrance-anim delay-1" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+      <main style={{ minHeight: 'calc(100vh - 70px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <div className="card" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
           
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '24px' }} className="entrance-anim delay-2">
-            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--success)', animation: 'pulse-neon 2s infinite' }}></div>
-            <span style={{ color: 'var(--success)', fontWeight: 'bold', letterSpacing: '0.1em' }}>GAME ACTIVE</span>
-          </div>
-
           {isHost && !hasWon && (
-             <div className="entrance-anim" style={{ marginBottom: '24px' }}>
-                <p style={{ fontSize: '14px', color: 'var(--on-surface-variant)', marginBottom: '8px' }}>Share this link with Player 2:</p>
-                <div style={{ padding: '16px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', wordBreak: 'break-all', marginBottom: '16px', border: '1px solid rgba(255,255,255,0.1)' }}>
+             <div style={{ marginBottom: '1.5rem' }}>
+                <p style={{ fontSize: '0.875rem', color: 'var(--foreground)', opacity: 0.8, marginBottom: '0.5rem' }}>Share this link with Player 2:</p>
+                <div style={{ padding: '0.75rem', background: 'var(--background)', borderRadius: '8px', wordBreak: 'break-all', marginBottom: '1rem', border: `1px solid var(--border)` }}>
                   <a href={`${window.location.origin}/game/${gameId}`} style={{ color: 'var(--primary)', textDecoration: 'none' }}>{`${window.location.origin}/game/${gameId}`}</a>
                 </div>
-                <button className="btn-primary" style={{ height: '48px', fontSize: '16px', animation: 'none' }} onClick={() => navigator.clipboard.writeText(`${window.location.origin}/game/${gameId}`)}>
-                  COPY LINK
+                <button className="btn-primary" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/game/${gameId}`)}>
+                  Copy Link
                 </button>
              </div>
           )}
 
-          <div className="entrance-anim delay-3" style={{ marginBottom: '32px' }}>
-            <div style={{ fontSize: '14px', color: 'var(--on-surface-variant)', letterSpacing: '0.1em', marginBottom: '8px' }}>ATTEMPT</div>
-            <div style={{ fontSize: '48px', fontFamily: 'var(--font-headline)', color: 'var(--on-surface)', fontWeight: 800 }}>{String(attempts).padStart(2, '0')}</div>
+          <div style={{ marginBottom: '2rem' }}>
+            <div style={{ fontSize: '0.875rem', color: 'var(--foreground)', opacity: 0.6, marginBottom: '0.25rem' }}>ATTEMPT</div>
+            <div style={{ fontSize: '3rem', fontWeight: 700, color: 'var(--foreground)' }}>{attempts}</div>
           </div>
 
-          <div className="space-y-stack-md entrance-anim delay-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             {!isHost && (
               <input
                 className="input-field"
-                maxLength={4}
-                placeholder="••••"
-                type="password"
+                placeholder="Enter guess..."
+                type="text"
                 value={guess}
                 onChange={(e) => setGuess(e.target.value.replace(/\D/g, ''))}
-                style={{ marginBottom: '8px' }}
                 disabled={hasWon}
               />
             )}
             
-            <div style={{ height: '24px', marginBottom: '32px', color: feedbackColor, fontWeight: 'bold', fontSize: '14px', transition: 'color 0.3s' }}>
-              {feedback || (isHost ? "Waiting for Player 2..." : "")}
+            <div style={{ minHeight: '1.5rem', color: feedbackColor, fontWeight: 600, fontSize: '1rem' }}>
+              {feedback || (isHost ? "Waiting for Player 2 to guess..." : "")}
             </div>
             
             {!hasWon ? (
               !isHost && (
-                <button className="btn-primary" onClick={handleSubmitGuess} disabled={guess.length !== 4}>
-                  <span>SUBMIT GUESS</span>
-                  <span className="material-symbols-outlined">send</span>
+                <button className="btn-primary" onClick={handleSubmitGuess} disabled={!guess}>
+                  Submit Guess
                 </button>
               )
             ) : (
-              <button className="btn-primary" onClick={() => router.push('/')} style={{ background: 'var(--success)', color: '#000', boxShadow: 'none' }}>
-                <span>PLAY AGAIN</span>
-                <span className="material-symbols-outlined">replay</span>
+              <button className="btn-primary" onClick={() => router.push('/')} style={{ background: 'var(--success)' }}>
+                Play Again
               </button>
             )}
           </div>
         </div>
       </main>
-      
-      {/* Background shader representation using CSS */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'radial-gradient(circle at 50% 50%, #2f0b3a 0%, #111318 100%)', opacity: 0.8 }}></div>
     </>
   );
 }

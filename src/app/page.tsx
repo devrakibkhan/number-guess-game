@@ -7,8 +7,8 @@ export default function Home() {
   const router = useRouter();
 
   const handleStartGame = async () => {
-    if (!secret || secret.length !== 4) {
-      alert("Please enter a 4-digit secret number.");
+    if (!secret || isNaN(Number(secret))) {
+      alert("Please enter a valid secret number.");
       return;
     }
 
@@ -30,47 +30,37 @@ export default function Home() {
   return (
     <>
       <header className="header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span className="material-symbols-outlined" style={{ color: 'var(--primary)' }}>grid_view</span>
-          <h1 className="app-title">CIPHER_SHIFT</h1>
-        </div>
+        <h1 className="app-title">Number Guessing Game</h1>
       </header>
 
-      <main style={{ position: 'relative', zIndex: 10, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '64px 24px' }}>
-        <div className="glass-card entrance-anim delay-1" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+      <main style={{ minHeight: 'calc(100vh - 70px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+        <div className="card" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
           
-          <h2 style={{ fontFamily: 'var(--font-headline)', fontSize: '24px', fontWeight: 700, marginBottom: '8px' }} className="entrance-anim delay-3">
-            PLAYER 1: SET THE SECRET
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+            Player 1: Set the Secret
           </h2>
-          <p style={{ color: 'var(--on-surface-variant)', fontSize: '14px', marginBottom: '32px' }} className="entrance-anim delay-3">
-            Define the numerical cipher for your opponent to shift.
+          <p style={{ color: 'var(--foreground)', opacity: 0.8, fontSize: '0.875rem', marginBottom: '2rem' }}>
+            Choose a secret number for Player 2 to guess.
           </p>
 
-          <div className="space-y-stack-md entrance-anim delay-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <input
               className="input-field"
-              maxLength={4}
-              placeholder="••••"
+              placeholder="e.g. 42"
               type="password"
               value={secret}
               onChange={(e) => setSecret(e.target.value.replace(/\D/g, ''))}
-              style={{ marginBottom: '8px' }}
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--on-surface-variant)', fontSize: '12px', fontFamily: 'var(--font-body)', marginBottom: '32px' }}>
-              <span>4 DIGITS</span>
-              <span>NUMBERS ONLY</span>
+            <div style={{ textAlign: 'left', color: 'var(--foreground)', opacity: 0.6, fontSize: '0.75rem', marginBottom: '1rem' }}>
+              NUMBERS ONLY
             </div>
             
             <button className="btn-primary" onClick={handleStartGame}>
-              <span>START GAME</span>
-              <span className="material-symbols-outlined">play_arrow</span>
+              Start Game
             </button>
           </div>
         </div>
       </main>
-      
-      {/* Background shader representation using CSS */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 0, background: 'radial-gradient(circle at 50% 50%, #2f0b3a 0%, #111318 100%)', opacity: 0.8 }}></div>
     </>
   );
 }

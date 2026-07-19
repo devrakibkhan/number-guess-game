@@ -5,8 +5,8 @@ export async function POST(request: Request) {
   try {
     const { secret } = await request.json();
     
-    if (!secret || secret.length !== 4) {
-      return NextResponse.json({ error: 'Invalid secret' }, { status: 400 });
+    if (!secret || isNaN(Number(secret))) {
+      return NextResponse.json({ error: 'Invalid secret number' }, { status: 400 });
     }
 
     // Generate a simple random ID for the game

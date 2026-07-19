@@ -9,8 +9,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Game not found' }, { status: 404 });
     }
 
-    if (!guess || guess.length !== 4) {
-      return NextResponse.json({ error: 'Invalid guess. Must be 4 digits.' }, { status: 400 });
+    if (!guess || isNaN(Number(guess))) {
+      return NextResponse.json({ error: 'Invalid guess. Must be a number.' }, { status: 400 });
     }
 
     // Fetch the secret from Supabase
