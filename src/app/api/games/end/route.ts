@@ -3,25 +3,21 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
-    const { gameId, guess } = await request.json();
+    const { gameId } = await request.json();
 
     if (!gameId) {
       return NextResponse.json({ error: 'Game not found' }, { status: 404 });
     }
 
-    if (!guess || isNaN(Number(guess))) {
-      return NextResponse.json({ error: 'Invalid guess. Must be a number.' }, { status: 400 });
-    }
-
-    // Update the game record with the guess and set hint to 'pending'
+    // Update the game status to 'ended_manually'
     const { error: updateError } = await supabase
       .from('games')
-      .update({ current_guess: guess, hint: 'pending' })
+      .update({ game_status: 'ended_manually' })
       .eq('id', gameId);
 
     if (updateError) {
       console.error("Supabase update error:", updateError);
-      return NextResponse.json({ error: 'Failed to update game state' }, { status: 500 });
+      return NextResponse.json({ error: 'Failed to end game' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

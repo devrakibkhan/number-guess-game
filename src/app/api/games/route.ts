@@ -13,7 +13,11 @@ export async function POST(request: Request) {
     const { data, error } = await supabase
       .from('games')
       .insert([
-        { secret_number: String(secret) }
+        { 
+          secret_number: String(secret),
+          game_status: 'waiting_player_2',
+          total_attempts: 0
+        }
       ])
       .select('id')
       .single();
