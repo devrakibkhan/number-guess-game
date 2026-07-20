@@ -59,3 +59,14 @@ export function playEndSound() {
   setTimeout(() => playTone(300, "sawtooth", 0.3, 0.2), 0);
   setTimeout(() => playTone(250, "sawtooth", 0.5, 0.2), 200);
 }
+
+export function playNudgeSound() {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  // A rapid trill / buzzer sound to grab attention
+  for (let i = 0; i < 5; i++) {
+    setTimeout(() => playTone(1500, "square", 0.05, 0.1), i * 100);
+    setTimeout(() => playTone(1200, "square", 0.05, 0.1), i * 100 + 50);
+  }
+}
+

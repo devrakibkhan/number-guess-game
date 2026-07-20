@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { styled, globalStyles, keyframes } from "@/stitches.config";
 import { playClickSound } from "@/lib/sounds";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const pulse = keyframes({
   '0%, 100%': { opacity: 1 },
@@ -94,6 +95,7 @@ export default function Home() {
   const [maxAttempts, setMaxAttempts] = useState("10");
   const [showWelcome, setShowWelcome] = useState(true);
   const router = useRouter();
+  const { t } = useLanguage();
 
   const closeWelcome = () => {
     playClickSound();
@@ -123,19 +125,18 @@ export default function Home() {
 
   return (
     <Root>
-      <Header>
-        <Title>Two-Way Number Guessing</Title>
+      <Header style={{ position: 'fixed', top: 0 }}>
+        <Title>{t('siteTitle')}</Title>
       </Header>
 
       <Main>
         <Card>
           <div style={{ textAlign: 'center', marginBottom: '$2' }}>
-            <Title css={{ fontSize: '$5', filter: 'none' }}>Host a Game</Title>
-            <div style={{ fontFamily: 'var(--fonts-mono)', fontSize: '12px', color: 'var(--onSurfaceVariant)', marginTop: '4px' }}>Setup the rules and your secret number.</div>
+            <Title css={{ fontSize: '$5', filter: 'none' }}>{t('hostGameTitle')}</Title>
           </div>
 
           <div>
-            <LabelCaps>Your Name</LabelCaps>
+            <LabelCaps>{t('yourName')}</LabelCaps>
             <SecondaryInput
               placeholder="e.g. Alice"
               type="text"
@@ -146,7 +147,7 @@ export default function Home() {
           </div>
 
           <div>
-            <LabelCaps>Max Attempts</LabelCaps>
+            <LabelCaps>{t('maxAttempts')}</LabelCaps>
             <SecondaryInput
               placeholder="10"
               type="text"
@@ -159,7 +160,7 @@ export default function Home() {
           </div>
 
           <div>
-            <LabelCaps>Your Secret Number</LabelCaps>
+            <LabelCaps>{t('yourSecretNumber')}</LabelCaps>
             <SecondaryInput
               placeholder="0-100"
               type="text"
@@ -171,7 +172,7 @@ export default function Home() {
           </div>
           
           <ActionBtn onClick={handleStartGame} disabled={!secret || !playerName || !maxAttempts} css={{ marginTop: '$4' }}>
-            <span className="material-symbols-outlined">terminal</span> Create Game
+            <span className="material-symbols-outlined">terminal</span> {t('startGameBtn')}
           </ActionBtn>
         </Card>
       </Main>
@@ -181,18 +182,18 @@ export default function Home() {
           <ModalContent>
             <ModalTitle>
               <span className="material-symbols-outlined" style={{ fontSize: '32px' }}>info</span>
-              Welcome to the Two-Way Number Guessing Game!
+              {t('welcomeTitle')}
             </ModalTitle>
             <ModalText>
-              <p>This is a fast-paced, simultaneous guessing game for two players.</p>
+              <p><strong>{t('rulesTitle')}</strong></p>
               <ul>
-                <li><strong>Set your secret:</strong> Both players start by picking a secret number.</li>
-                <li><strong>Guess & Hint:</strong> On your turn, you provide a hint (Less, More, or Correct) for your opponent's previous guess.</li>
-                <li><strong>Simultaneous:</strong> In the same turn, you make your <em>next guess</em> for their secret!</li>
-                <li><strong>Win:</strong> The first person to accurately guess the opponent's secret wins! If 10 turns pass, it's a draw.</li>
+                <li>{t('rule1')}</li>
+                <li>{t('rule2')}</li>
+                <li>{t('rule3')}</li>
+                <li>{t('rule4')}</li>
               </ul>
             </ModalText>
-            <ActionBtn onClick={closeWelcome} css={{ marginTop: '$2' }}>Got it, let's play!</ActionBtn>
+            <ActionBtn onClick={closeWelcome} css={{ marginTop: '$2' }}>{t('welcomeBtn')}</ActionBtn>
           </ModalContent>
         </ModalOverlay>
       )}

@@ -2,8 +2,9 @@
 import { useState, useEffect, use, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { playClickSound, playTurnSound, playWinSound, playEndSound, playHintSound } from "@/lib/sounds";
+import { playClickSound, playTurnSound, playWinSound, playEndSound, playHintSound, playNudgeSound } from "@/lib/sounds";
 import { styled, globalStyles, keyframes } from "@/stitches.config";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 // --- KEYFRAMES ---
 const slideIn = keyframes({
@@ -46,11 +47,7 @@ const Header = styled('header', {
   '@media (max-width: 768px)': { padding: '$3 $4', position: 'relative' }
 });
 
-const SysBadge = styled('span', {
-  fontFamily: '$mono', fontSize: '14px', color: '$onSurfaceVariant', textTransform: 'uppercase',
-  letterSpacing: '0.15em', backgroundColor: 'rgba(53, 53, 52, 0.5)', padding: '4px 12px',
-  borderRadius: '$1', border: '1px solid rgba(59, 73, 75, 0.3)',
-});
+// SysBadge removed
 
 const Title = styled('h1', {
   fontFamily: '$space', fontSize: '$5', fontWeight: 700,
@@ -215,6 +212,7 @@ const GuessValue = styled('span', {
 
 export default function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
   globalStyles();
+  const { t } = useLanguage();
   const { gameId } = use(params);
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -351,8 +349,8 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
       .on('broadcast', { event: 'nudge' }, (payload) => {
          const sender = payload.payload.sender;
          if (sender !== (isHost ? 'host' : 'player2')) {
-           playHintSound();
-           showToast("Your opponent nudged you to hurry up!", "info");
+           playNudgeSound();
+           showToast(t('nudge'), "info");
          }
       })
       .subscribe();
@@ -487,7 +485,6 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
       
       <Header>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <SysBadge>PLAYING AS: {isHost ? 'HOST' : 'PLAYER 2'}</SysBadge>
           <div style={{ color: 'var(--onSurfaceVariant)' }}>{isHost ? `${player1Name}` : `${player2Name}`}</div>
         </div>
         <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -535,7 +532,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
                     <SecondaryInput type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0-100" value={joinGuess} onChange={e => setJoinGuess(e.target.value.replace(/\D/g, ''))} disabled={submitting} css={{ fontSize: '24px', flex: 1 }} />
                     <ActionBtn onClick={handleRequestHint} css={{ flex: '0 0 auto', width: 'auto' }}>
-                       <span className="material-symbols-outlined">lightbulb</span> Hint
+                       <span className="material-symbols-outlined">lightbulb</span> {t('hint')}
                     </ActionBtn>
                   </div>
                 </div>
@@ -564,9 +561,8 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                   <span className="material-symbols-outlined" style={{ color: 'var(--tertiaryContainer)' }}>vpn_key</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <LabelCaps>Secret Number</LabelCaps>
+                  <LabelCaps>{t('secretNumber', { Name: isHost ? player1Name : player2Name })}</LabelCaps>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-                    <span style={{ fontFamily: 'var(--fonts-mono)', opacity: 0.7 }}>VAL:</span>
                     <span style={{ fontFamily: 'var(--fonts-mono)', fontSize: '28px', color: 'var(--tertiaryContainer)', fontWeight: 'bold', textShadow: '0 0 12px rgba(0,250,100,0.6)' }}>
                       {isHost ? secretNumber : player2Secret}
                     </span>
@@ -601,12 +597,11 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                 <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{ width: '8px', height: '8px', backgroundColor: 'var(--primaryContainer)', borderRadius: '50%', boxShadow: '0 0 8px rgba(0,240,255,0.8)', animation: `${pulse} 2s infinite` }}></div>
-                    <LabelCaps color="primary">OPPONENT'S LAST GUESS</LabelCaps>
+                    <LabelCaps color="primary">{t('opponentsGuess', { OpponentName: activeOpponentName })}</LabelCaps>
                   </div>
                   <GuessHeading>
-                    {activeOpponentName}'s Guess: 
                     <GuessValue>
-                      {isHost ? currentGuess : player1CurrentGuess}
+                      {t('guessValue', { Value: (isHost ? currentGuess : player1CurrentGuess) || '--' })}
                     </GuessValue>
                   </GuessHeading>
                 </div>
@@ -615,15 +610,15 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                   <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', minHeight: '120px' }}>
                     <HintBtn active={turnHint === 'less' ? 'magenta' : undefined} onClick={() => handleHintSelection('less')}>
                       <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>keyboard_arrow_down</span>
-                      Too High
+                      {t('less')}
                     </HintBtn>
                     <HintBtn active={turnHint === 'more' ? 'cyan' : undefined} onClick={() => handleHintSelection('more')}>
                       <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>keyboard_arrow_up</span>
-                      Too Low
+                      {t('more')}
                     </HintBtn>
                     <HintBtn active={turnHint === 'correct' ? 'green' : undefined} onClick={() => handleHintSelection('correct')}>
                       <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>done_all</span>
-                      Match
+                      {t('correct')}
                     </HintBtn>
                   </div>
                 ) : (
@@ -646,7 +641,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                     <LabelCaps color="secondary">YOUR TURN</LabelCaps>
                   </div>
                   <h2 style={{ fontFamily: 'var(--fonts-space)', fontSize: '22px', textTransform: 'uppercase', margin: '8px 0 0 0' }}>
-                    Make your guess and give a hint
+                    {t('yourTurnGuess', { MyName: isHost ? player1Name : player2Name })}
                   </h2>
                 </div>
 
@@ -655,7 +650,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                     <>
                       {(isHost ? player2Hint : hint) && (
                         <div style={{ padding: '8px', border: '1px solid var(--outlineVariant)', borderRadius: '4px', textAlign: 'center', color: (isHost ? player2Hint : hint) === 'correct' ? 'var(--tertiaryContainer)' : 'var(--secondaryContainer)' }}>
-                          Hint Received: {(isHost ? player2Hint : hint).toUpperCase()}
+                          {t('hintReceived', { HINT: t((isHost ? player2Hint : hint) || '') })}
                         </div>
                       )}
                       
@@ -672,10 +667,10 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                       
                       <div style={{ display: 'flex', gap: '16px' }}>
                         <ActionBtn onClick={handleRequestHint}>
-                          <span className="material-symbols-outlined">lightbulb</span> Request Hint
+                          <span className="material-symbols-outlined">lightbulb</span> {t('requestHint')}
                         </ActionBtn>
                         <ActionBtn primary={true} onClick={handleTurnSubmit} disabled={submitting || !turnHint || (turnHint !== 'correct' && !turnGuess)}>
-                          <span className="material-symbols-outlined">send</span> {submitting ? 'Submitting' : 'Submit'}
+                          <span className="material-symbols-outlined">send</span> {submitting ? t('send') : t('send')}
                         </ActionBtn>
                       </div>
                     </>
@@ -689,7 +684,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                         </div>
                       ) : (
                         <ActionBtn onClick={handleNudge}>
-                          <span className="material-symbols-outlined">notifications_active</span> Nudge Opponent
+                          <span className="material-symbols-outlined">notifications_active</span> {t('nudge')}
                         </ActionBtn>
                       )}
                     </div>
