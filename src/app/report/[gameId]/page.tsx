@@ -46,6 +46,7 @@ const ResultBanner = styled('div', {
   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '$4',
   animation: `${float} 3s ease-in-out infinite`, textTransform: 'uppercase',
   letterSpacing: '0.1em', fontFamily: '$space',
+  '@media (max-width: 768px)': { fontSize: '$4', flexDirection: 'column', textAlign: 'center', padding: '$4' },
   variants: {
     status: {
       win: { 

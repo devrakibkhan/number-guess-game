@@ -43,7 +43,7 @@ const Header = styled('header', {
   borderBottom: '1px solid rgba(0, 240, 255, 0.2)',
   boxShadow: '$glass', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
   width: '100%', padding: '$4 $6', position: 'fixed', top: 0, zIndex: 50,
-  '@media (max-width: 768px)': { padding: '$2 $4', flexWrap: 'wrap', gap: '$2' }
+  '@media (max-width: 768px)': { padding: '$3 $4', position: 'relative' }
 });
 
 const SysBadge = styled('span', {
@@ -58,6 +58,7 @@ const Title = styled('h1', {
   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
   textTransform: 'uppercase', letterSpacing: '0.1em',
   filter: 'drop-shadow(0 0 15px rgba(0, 240, 255, 0.6))', margin: 0,
+  '@media (max-width: 768px)': { fontSize: '$4' }
 });
 
 const AbortBtn = styled('button', {
@@ -71,6 +72,7 @@ const Main = styled('main', {
   flex: 1, marginTop: '100px', padding: '$6', display: 'flex', flexDirection: 'column',
   alignItems: 'center', gap: '$6', maxWidth: '1200px', marginX: 'auto', width: '100%',
   position: 'relative', zIndex: 10,
+  '@media (max-width: 768px)': { marginTop: '20px', padding: '$4', gap: '$4' }
 });
 
 const StatsBar = styled('div', {
@@ -157,7 +159,8 @@ const GlowingInput = styled('input', {
   transition: 'all 0.3s', textShadow: '0 0 15px rgba(254, 0, 254, 0.4)',
   '&::placeholder': { color: '$surfaceContainerHighest', fontWeight: 400, textShadow: 'none' },
   '&:focus': { borderColor: '$secondaryContainer' },
-  '&:disabled': { opacity: 0.5 }
+  '&:disabled': { opacity: 0.5 },
+  '@media (max-width: 768px)': { fontSize: '32px' }
 });
 
 const SecondaryInput = styled('input', {
@@ -198,6 +201,16 @@ const JoinCard = styled('div', {
 const JoinLabel = styled('label', {
   fontFamily: '$space', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase',
   color: '$primaryContainer', marginBottom: '$2', display: 'block'
+});
+
+const GuessHeading = styled('h2', {
+  fontFamily: '$space', fontSize: '32px', fontWeight: 'bold', textTransform: 'uppercase', margin: '8px 0 0 0',
+  '@media (max-width: 768px)': { fontSize: '20px' }
+});
+
+const GuessValue = styled('span', {
+  fontFamily: '$mono', fontSize: '48px', color: '$primaryContainer', textShadow: '0 0 20px rgba(0,240,255,0.6)', marginLeft: '12px', verticalAlign: 'middle',
+  '@media (max-width: 768px)': { fontSize: '32px', display: 'block', marginLeft: 0, marginTop: '8px' }
 });
 
 export default function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
@@ -478,7 +491,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
           <div style={{ color: 'var(--onSurfaceVariant)' }}>{isHost ? `${player1Name}` : `${player2Name}`}</div>
         </div>
         <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <Title>Two-Way Number Guessing</Title>
+          <Title css={{ display: 'none', '@media (min-width: 768px)': { display: 'block' } }}>Two-Way Number Guessing</Title>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primaryContainer)', backgroundColor: 'rgba(0,240,255,0.1)', padding: '4px 12px', borderRadius: '4px', border: '1px solid rgba(0,240,255,0.3)' }}>
@@ -563,8 +576,8 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
 
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
                 <LabelCaps>Attempts</LabelCaps>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                  <div style={{ width: '256px', height: '8px', backgroundColor: 'var(--surfaceContainerHighest)', borderRadius: '99px', overflow: 'hidden', border: '1px solid var(--outlineVariant)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', width: '100%' }}>
+                  <div style={{ width: '100%', maxWidth: '256px', height: '8px', backgroundColor: 'var(--surfaceContainerHighest)', borderRadius: '99px', overflow: 'hidden', border: '1px solid var(--outlineVariant)' }}>
                     <div style={{ height: '100%', width: `${(totalAttempts / maxAttempts) * 100}%`, background: 'linear-gradient(to right, var(--primary), var(--primaryContainer))', boxShadow: '0 0 10px rgba(0,240,255,0.8)' }}></div>
                   </div>
                   <span style={{ fontFamily: 'var(--fonts-mono)', fontSize: '18px', fontWeight: 'bold', textShadow: '0 0 8px rgba(0,240,255,0.5)' }}>
@@ -590,12 +603,12 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                     <div style={{ width: '8px', height: '8px', backgroundColor: 'var(--primaryContainer)', borderRadius: '50%', boxShadow: '0 0 8px rgba(0,240,255,0.8)', animation: `${pulse} 2s infinite` }}></div>
                     <LabelCaps color="primary">OPPONENT'S LAST GUESS</LabelCaps>
                   </div>
-                  <h2 style={{ fontFamily: 'var(--fonts-space)', fontSize: '32px', fontWeight: 'bold', textTransform: 'uppercase', margin: '8px 0 0 0' }}>
+                  <GuessHeading>
                     {activeOpponentName}'s Guess: 
-                    <span style={{ fontFamily: 'var(--fonts-mono)', fontSize: '48px', color: 'var(--primaryContainer)', textShadow: '0 0 20px rgba(0,240,255,0.6)', marginLeft: '12px', verticalAlign: 'middle' }}>
+                    <GuessValue>
                       {isHost ? currentGuess : player1CurrentGuess}
-                    </span>
-                  </h2>
+                    </GuessValue>
+                  </GuessHeading>
                 </div>
 
                 {isMyTurn ? (

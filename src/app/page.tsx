@@ -27,6 +27,7 @@ const Title = styled('h1', {
   WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
   textTransform: 'uppercase', letterSpacing: '0.1em',
   filter: 'drop-shadow(0 0 15px rgba(0, 240, 255, 0.6))', margin: 0,
+  '@media (max-width: 768px)': { fontSize: '$4' },
 });
 
 const Main = styled('main', {
