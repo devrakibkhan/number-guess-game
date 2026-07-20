@@ -2,6 +2,7 @@
 import { useState, useEffect, use } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { styled, globalStyles, keyframes } from "@/stitches.config";
 
 const float = keyframes({
@@ -95,6 +96,7 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
   const router = useRouter();
   const searchParams = useSearchParams();
   const isHost = searchParams.get("host") === "true";
+  const { t } = useLanguage();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -110,12 +112,12 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
           .single();
           
         if (fetchError || !data) {
-          setError("Game not found.");
+          setError(t('gameNotFound'));
         } else {
           setGameData(data);
         }
       } catch (err) {
-        setError("Error fetching game data.");
+        setError(t('errorFetching'));
       } finally {
         setLoading(false);
       }
@@ -123,7 +125,7 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
     fetchGame();
   }, [gameId]);
 
-  if (loading) return <Root><Main css={{justifyContent: 'center'}}><Title css={{fontSize: '$4'}}>Loading Report...</Title></Main></Root>;
+  if (loading) return <Root><Main css={{justifyContent: 'center'}}><Title css={{fontSize: '$4'}}>{t('loadingReport')}</Title></Main></Root>;
   if (error || !gameData) return <Root><Main css={{justifyContent: 'center'}}><Title css={{color: '$error', fontSize: '$4'}}>{error}</Title></Main></Root>;
 
   const p1Name = gameData.player_1_name || "Player 1";
@@ -142,29 +144,29 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
 
   const status = gameData.game_status;
   let bannerStatus: "win" | "lose" | "draw" = "draw";
-  let bannerText = "Game Ended";
+  let bannerText = "";
   let bannerIcon = "verified_user";
 
   if (status === 'draw') {
-    bannerText = "It's a Draw! Max attempts reached.";
+    bannerText = t('drawMsg');
     bannerIcon = "balance";
   } else if (status === 'ended_manually') {
-    bannerText = "Game Ended Manually.";
+    bannerText = t('gameEndedManually');
     bannerIcon = "cancel";
   } else if (status === 'player_1_won') {
     bannerStatus = isHost ? "win" : "lose";
-    bannerText = isHost ? "Congratulations, You Won!" : `${p1Name} Won!`;
+    bannerText = isHost ? t('youWon') : t('playerWon', { Name: p1Name });
     bannerIcon = isHost ? "emoji_events" : "skull";
   } else if (status === 'player_2_won') {
     bannerStatus = !isHost ? "win" : "lose";
-    bannerText = !isHost ? "Congratulations, You Won!" : `${p2Name} Won!`;
+    bannerText = !isHost ? t('youWon') : t('playerWon', { Name: p2Name });
     bannerIcon = !isHost ? "emoji_events" : "skull";
   }
 
   return (
     <Root>
       <Header>
-        <Title>Match Report</Title>
+        <Title>{t('matchReport')}</Title>
       </Header>
       <Main>
         <Card>
@@ -179,25 +181,25 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
 
           <StatsGrid>
             <StatBox>
-              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>lock</span> {p1Name}'s Secret</StatLabel>
+              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>lock</span> {t('playerSecret', { Name: p1Name })}</StatLabel>
               <StatValue>{gameData.secret_number || "N/A"}</StatValue>
             </StatBox>
             <StatBox>
-              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>lock</span> {p2Name}'s Secret</StatLabel>
+              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>lock</span> {t('playerSecret', { Name: p2Name })}</StatLabel>
               <StatValue>{gameData.player_2_secret_number || "N/A"}</StatValue>
             </StatBox>
             <StatBox>
-              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>autorenew</span> Total Turns</StatLabel>
+              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>autorenew</span> {t('totalTurns')}</StatLabel>
               <StatValue>{gameData.total_attempts} <span style={{fontSize: '14px', color: 'var(--onSurfaceVariant)'}}>/ {maxAttempts}</span></StatValue>
             </StatBox>
             <StatBox>
-              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>timer</span> Total Time</StatLabel>
+              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>timer</span> {t('totalTime')}</StatLabel>
               <StatValue>{timeStr}</StatValue>
             </StatBox>
           </StatsGrid>
 
           <ActionBtn onClick={() => router.push('/')} css={{ marginTop: '$4' }}>
-            <span className="material-symbols-outlined">rocket_launch</span> Play Again 🚀
+            <span className="material-symbols-outlined">rocket_launch</span> {t('playAgain')} 🚀
           </ActionBtn>
         </Card>
       </Main>

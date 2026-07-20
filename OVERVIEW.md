@@ -16,11 +16,13 @@ This is a simultaneous, two-way guessing game. The objective is to be the first 
 2. **Joining a Game:** Player 2 joins the game via the link, enters their name, sets their own secret number, and makes their very first guess of the Host's secret.
 3. **The Turn Cycle:** 
    * Players take turns simultaneously.
-   * On your turn, you must provide a hint (Less, More, or Correct) for the guess your opponent just made.
-   * In the same turn, you must enter your next guess for your opponent's secret number.
-4. **Winning & Drawing:**
-   * If a player provides the hint "Correct", the game immediately ends and the opponent wins.
-   * If neither player guesses correctly within the custom turn limit (e.g., 10 turns), the game ends in a Draw.
+   * On your turn, you must enter your next guess for your opponent's secret number.
+   * The game automatically evaluates your opponent's latest guess and instantly provides them with a 100% accurate hint (Less, More, or Correct). You don't have to manually select hints anymore.
+4. **Winning, Drawing & Continuous Play:**
+   * If a player guesses correctly, they have won! However, the game **does not immediately end**.
+   * The player who won simply sits back; their guess input disappears, and they automatically continue to evaluate their opponent's guesses (by submitting the turn).
+   * The opponent is allowed to use their remaining attempts to also try and find the number.
+   * The game ends when **both** players have found the number, or when the custom turn limit (e.g., 10 turns) is exhausted.
    * Players can also manually click the "End Game" button to instantly terminate the match.
 
 ## Key Features
@@ -44,10 +46,16 @@ Players can use the "Request Hint" button to ask for clues. This opens an input 
 The game completely eschews blocking browser `alert()` popups in favor of a custom-built, CSS-animated Toast Notification system. Whether a player successfully copies a game link, receives a nudge, or hits an error state, a beautifully styled toast smoothly slides onto the screen to provide feedback without interrupting gameplay.
 
 ### 🎵 Synthetic Sound Effects
-The game includes a lightweight sound engine built entirely with the browser's native Web Audio API. It plays dynamic sounds for button clicks, successful turn submissions, incoming custom hints, and distinct arpeggios for winning or ending the game—all without requiring external MP3 files.
+The game includes a lightweight sound engine built entirely with the browser's native Web Audio API. It plays dynamic sounds for button clicks across the entire app, successful turn submissions, incoming custom hints, and distinct arpeggios for winning or ending the game—all without requiring external MP3 files.
+
+### 🌐 Internationalization (i18n)
+The entire game features seamless, state-driven translation between English and Bengali (Bangla). Players can toggle the language instantly at any point in the game without page reloads, using a custom `LanguageContext` provider.
+
+### 🤖 Auto-Evaluating Game Logic
+To prevent human error from ruining matches, the MORE / LESS / CORRECT hint buttons are entirely automated. The state machine intelligently calculates the ongoing situation and highlights the perfect hint instantly.
 
 ### 📊 Game Report Page
-Finished games redirect both players to a dedicated `/report` page. This page breaks down the final results (e.g., "Alice Won!"), reveals both players' secret numbers, displays the total turns taken vs the max limit, shows the exact total time elapsed, and provides a quick way to play again.
+Finished games redirect both players to a dedicated `/report` page. This page breaks down the final results (e.g., "Rakib Won!"), reveals both players' secret numbers, displays the total turns taken vs the max limit, shows the exact total time elapsed, and provides a quick way to play again. It is also fully translatable.
 
 ## Database Schema (Supabase)
 The game uses a single `games` table with the following structure:
