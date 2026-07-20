@@ -17,7 +17,7 @@ This is a simultaneous, two-way guessing game. The objective is to be the first 
 3. **The Turn Cycle:** 
    * Players take turns simultaneously.
    * On your turn, you must enter your next guess for your opponent's secret number.
-   * The game automatically evaluates your opponent's latest guess and instantly provides them with a 100% accurate hint (Less, More, or Correct). You don't have to manually select hints anymore.
+   * The game requires you to evaluate your opponent's latest guess by manually selecting a hint button (**LESS**, **MORE**, or **CORRECT**). The client validated evaluation system ensures you cannot choose an incorrect hint.
 4. **Winning, Drawing & Continuous Play:**
    * If a player guesses correctly, they have won! However, the game **does not immediately end**.
    * The player who won simply sits back; their guess input disappears, and they automatically continue to evaluate their opponent's guesses (by submitting the turn).
@@ -33,8 +33,11 @@ The app features a custom design system built with Stitches. It includes a sleek
 ### 📱 Mobile-Optimized Inputs
 All number input fields (secrets and guesses) are configured with `inputMode="numeric"` and `pattern="[0-9]*"`, ensuring that mobile users are automatically presented with a large, easy-to-use numeric keypad rather than a full text keyboard.
 
-### ⚡ Real-Time Multiplayer
-The game relies on Supabase's powerful Postgres changes to sync state updates (like turns and hints) instantly across both players' screens.
+### 🤖 Manual Hint Evaluation & Validation Logic
+To keep the game interactive, players manually evaluate their opponent's guess by selecting **MORE**, **LESS**, or **CORRECT**. However, to prevent human error or cheating from ruining matches, the system mathematically validates the selected hint on submission. If a player tries to send a wrong hint, the game blocks the submission and displays an error toast.
+
+### ⚡ Optimistic UI Updates & Real-Time Multiplayer
+The game relies on Supabase's Postgres changes to sync state updates (like turns and hints) instantly across both players' screens. To provide a snappier experience, "Optimistic UI Updates" are used on turn submission: your screen instantly transitions to the "Waiting" state without waiting for the database broadcast to travel back.
 
 ### ⏱️ Server-Synchronized Timer
 A highly accurate game timer tracks the match duration in `MM:SS` format. By utilizing `started_at` and `ended_at` timestamps stored in Supabase, the timer remains perfectly synchronized for both players regardless of local clock discrepancies.
@@ -51,11 +54,8 @@ The game includes a lightweight sound engine built entirely with the browser's n
 ### 🌐 Internationalization (i18n)
 The entire game features seamless, state-driven translation between English and Bengali (Bangla). Players can toggle the language instantly at any point in the game without page reloads, using a custom `LanguageContext` provider.
 
-### 🤖 Auto-Evaluating Game Logic
-To prevent human error from ruining matches, the MORE / LESS / CORRECT hint buttons are entirely automated. The state machine intelligently calculates the ongoing situation and highlights the perfect hint instantly.
-
 ### 📊 Game Report Page
-Finished games redirect both players to a dedicated `/report` page. This page breaks down the final results (e.g., "Rakib Won!"), reveals both players' secret numbers, displays the total turns taken vs the max limit, shows the exact total time elapsed, and provides a quick way to play again. It is also fully translatable.
+Finished games redirect both players to a dedicated `/report` page. This page serves as a detailed scoreboard comparing player attempts. It clearly displays who won 1st Place (whoever guessed it in fewer attempts) and 2nd Place, reveals both players' secret numbers and final guesses, lists their exact attempt counts (or "FAILED" if they didn't guess it), shows the total time elapsed, and provides a quick "Play Again" button. It is also fully translatable.
 
 ## Database Schema (Supabase)
 The game uses a single `games` table with the following structure:
@@ -73,3 +73,5 @@ The game uses a single `games` table with the following structure:
 * `game_status` (text) - Tracks the state (`waiting_player_2`, `player_1_turn`, `player_2_turn`, `player_1_won`, `player_2_won`, `draw`, `ended_manually`)
 * `started_at` (timestamptz) - When Player 2 joined
 * `ended_at` (timestamptz) - When the game reached a terminal state
+* `player_1_won_at_attempt` (int) - The attempt number at which Player 1 guessed the secret number
+* `player_2_won_at_attempt` (int) - The attempt number at which Player 2 guessed the secret number
