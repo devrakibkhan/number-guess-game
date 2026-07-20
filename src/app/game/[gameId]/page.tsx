@@ -3,196 +3,201 @@ import { useState, useEffect, use, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { playClickSound, playTurnSound, playWinSound, playEndSound, playHintSound } from "@/lib/sounds";
-import { styled, globalStyles } from "@/stitches.config";
+import { styled, globalStyles, keyframes } from "@/stitches.config";
 
-const Container = styled('div', {
-  minHeight: '100vh',
-  display: 'flex',
-  flexDirection: 'column',
-  backgroundColor: '$background',
+// --- KEYFRAMES ---
+const slideIn = keyframes({
+  '0%': { transform: 'translateY(-100%)', opacity: 0 },
+  '100%': { transform: 'translateY(0)', opacity: 1 },
+});
+
+const pulse = keyframes({
+  '0%, 100%': { opacity: 1 },
+  '50%': { opacity: 0.5 },
+});
+
+// --- STYLED COMPONENTS ---
+const ToastContainer = styled('div', {
+  position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)',
+  zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '10px', pointerEvents: 'none',
+});
+const ToastMessage = styled('div', {
+  padding: '12px 24px', borderRadius: '$2', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+  animation: `${slideIn} 0.3s ease-out forwards`,
+  variants: {
+    type: {
+      success: { backgroundColor: '$tertiaryContainer', color: '#131313' },
+      info: { backgroundColor: '$primaryContainer', color: '#131313' },
+      error: { backgroundColor: '$error', color: '$onError' },
+    }
+  }
+});
+
+const Root = styled('div', {
+  minHeight: '100vh', display: 'flex', flexDirection: 'column',
+  backgroundColor: '$background', color: '$onSurface',
 });
 
 const Header = styled('header', {
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'center',
-  padding: '$4',
-  borderBottom: '1px solid $border',
+  backgroundColor: 'rgba(19, 19, 19, 0.9)', backdropFilter: 'blur(30px)',
+  borderBottom: '1px solid rgba(0, 240, 255, 0.2)',
+  boxShadow: '$glass', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  width: '100%', padding: '$4 $6', position: 'fixed', top: 0, zIndex: 50,
+  '@media (max-width: 768px)': { padding: '$2 $4', flexWrap: 'wrap', gap: '$2' }
+});
+
+const SysBadge = styled('span', {
+  fontFamily: '$mono', fontSize: '14px', color: '$onSurfaceVariant', textTransform: 'uppercase',
+  letterSpacing: '0.15em', backgroundColor: 'rgba(53, 53, 52, 0.5)', padding: '4px 12px',
+  borderRadius: '$1', border: '1px solid rgba(59, 73, 75, 0.3)',
 });
 
 const Title = styled('h1', {
-  fontSize: '$4',
-  fontWeight: 'bold',
-  background: 'linear-gradient(to right, $primary, #93c5fd)',
-  WebkitBackgroundClip: 'text',
-  WebkitTextFillColor: 'transparent',
-  margin: 0,
+  fontFamily: '$space', fontSize: '$5', fontWeight: 700,
+  background: 'linear-gradient(to right, $primaryContainer, #fff, $primaryContainer)',
+  WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+  textTransform: 'uppercase', letterSpacing: '0.1em',
+  filter: 'drop-shadow(0 0 15px rgba(0, 240, 255, 0.6))', margin: 0,
 });
 
-const Badge = styled('div', {
-  display: 'inline-block',
-  marginTop: '$1',
-  padding: '4px 8px',
-  borderRadius: '$1',
-  fontSize: '10px',
-  fontWeight: 'bold',
-  textTransform: 'uppercase',
-  variants: {
-    role: {
-      host: { background: '$border', color: '$foreground' },
-      guest: { background: '$primary', color: '#fff' }
-    }
-  }
+const AbortBtn = styled('button', {
+  fontFamily: '$space', fontSize: '12px', color: '$error', border: '1px solid rgba(255,180,171,0.3)',
+  backgroundColor: 'transparent', padding: '8px 16px', borderRadius: '$1', textTransform: 'uppercase',
+  letterSpacing: '0.15em', transition: 'all 0.3s',
+  '&:hover': { borderColor: '$error', backgroundColor: 'rgba(255, 180, 171, 0.1)', boxShadow: '0 0 15px rgba(255, 180, 171, 0.3)' }
 });
 
 const Main = styled('main', {
-  flex: 1,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: '$4',
+  flex: 1, marginTop: '100px', padding: '$6', display: 'flex', flexDirection: 'column',
+  alignItems: 'center', gap: '$6', maxWidth: '1200px', marginX: 'auto', width: '100%',
+  position: 'relative', zIndex: 10,
 });
 
-const Card = styled('div', {
-  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-  backdropFilter: 'blur(10px)',
-  border: '1px solid rgba(255, 255, 255, 0.1)',
-  borderRadius: '$3',
-  padding: '$5',
-  width: '100%',
-  maxWidth: '500px',
-  boxShadow: '$base',
+const StatsBar = styled('div', {
+  width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+  backgroundColor: 'rgba(19, 19, 19, 0.4)', backdropFilter: 'blur(10px)', borderRadius: '$4',
+  padding: '$5 $6', boxShadow: '$base', position: 'relative',
+  borderTop: '1px solid rgba(185, 202, 203, 0.3)',
+  '@media (max-width: 768px)': { flexDirection: 'column', gap: '$4', alignItems: 'flex-start' }
 });
 
-const TopBar = styled('div', {
-  display: 'flex',
-  justifyContent: 'space-between',
-  marginBottom: '$4',
-  paddingBottom: '$3',
-  borderBottom: '1px solid $border',
-});
-
-const Label = styled('div', {
-  fontSize: '10px',
-  color: '$foreground',
-  opacity: 0.6,
-  textTransform: 'uppercase',
-  letterSpacing: '1px',
-});
-
-const Value = styled('div', {
-  fontSize: '$5',
-  fontWeight: 'bold',
-});
-
-const Input = styled('input', {
-  width: '100%',
-  padding: '$3',
-  borderRadius: '$2',
-  border: '1px solid $border',
-  backgroundColor: '$backgroundSubtle',
-  color: '$foreground',
-  fontSize: '$3',
-  outline: 'none',
-  transition: 'border-color 0.2s',
-  '&:focus': {
-    borderColor: '$primary',
+const CornerAccent = styled('div', {
+  position: 'absolute', width: '16px', height: '16px',
+  variants: {
+    pos: {
+      tl: { top: -1, left: -1, borderTop: '2px solid', borderLeft: '2px solid' },
+      tr: { top: -1, right: -1, borderTop: '2px solid', borderRight: '2px solid' },
+      bl: { bottom: -1, left: -1, borderBottom: '2px solid', borderLeft: '2px solid' },
+      br: { bottom: -1, right: -1, borderBottom: '2px solid', borderRight: '2px solid' },
+    },
+    color: {
+      primary: { borderColor: 'rgba(0, 240, 255, 0.5)' },
+      secondary: { borderColor: 'rgba(254, 0, 254, 0.5)' },
+      tertiary: { borderColor: 'rgba(0, 250, 100, 0.5)' },
+    }
   }
 });
 
-const Button = styled('button', {
-  backgroundColor: '$primary',
-  color: '#fff',
-  padding: '$3 $4',
-  borderRadius: '$2',
-  fontSize: '$3',
-  fontWeight: 'bold',
-  width: '100%',
-  transition: 'all 0.2s',
-  '&:hover': {
-    backgroundColor: '$primaryHover',
-    transform: 'translateY(-2px)',
-    boxShadow: '$glow',
-  },
-  '&:disabled': {
-    opacity: 0.5,
-    cursor: 'not-allowed',
-    transform: 'none',
-    boxShadow: 'none',
-  },
+const GridPanel = styled('div', {
+  display: 'grid', gridTemplateColumns: '1fr', gap: '$6', width: '100%', marginTop: '16px',
+  '@media (min-width: 768px)': { gridTemplateColumns: '1fr 1fr' }
+});
+
+const Panel = styled('div', {
+  backgroundColor: 'rgba(19, 19, 19, 0.4)', backdropFilter: 'blur(10px)', borderRadius: '$4',
+  padding: '$6', display: 'flex', flexDirection: 'column', gap: '$6', position: 'relative',
+  transition: 'border-color 0.5s', overflow: 'hidden', className: 'group',
   variants: {
     variant: {
-      outline: {
-        backgroundColor: 'transparent',
-        border: '1px solid $border',
-        color: '$foreground',
-        '&:hover': {
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          boxShadow: 'none',
-        }
-      },
-      dangerText: {
-        backgroundColor: 'transparent',
-        color: '$error',
-        textDecoration: 'underline',
-        padding: 0,
-        width: 'auto',
-        fontSize: '$2',
-        '&:hover': {
-          backgroundColor: 'transparent',
-          color: '$errorHover',
-          transform: 'none',
-          boxShadow: 'none',
-        }
-      }
+      primary: { border: '1px solid rgba(0, 240, 255, 0.2)', '&:hover': { borderColor: 'rgba(0, 240, 255, 0.5)' } },
+      secondary: { border: '1px solid rgba(254, 0, 254, 0.2)', '&:hover': { borderColor: 'rgba(254, 0, 254, 0.5)' } },
     }
   }
 });
 
-const HintBox = styled('div', {
-  background: '$backgroundSubtle',
-  padding: '$4',
-  borderRadius: '$2',
-  border: '1px solid $border',
-  marginBottom: '$4',
-  textAlign: 'center',
+const PanelGlow = styled('div', {
+  position: 'absolute', width: '400px', height: '400px', borderRadius: '50%', filter: 'blur(80px)', pointerEvents: 'none', transition: 'background-color 0.7s',
+  variants: {
+    pos: { left: { left: -128, bottom: -128 }, right: { right: -128, top: -128 } },
+    color: {
+      primary: { backgroundColor: 'rgba(0, 240, 255, 0.05)', '.group:hover &': { backgroundColor: 'rgba(0, 240, 255, 0.1)' } },
+      secondary: { backgroundColor: 'rgba(254, 0, 254, 0.05)', '.group:hover &': { backgroundColor: 'rgba(254, 0, 254, 0.1)' } }
+    }
+  }
 });
 
-const FormGroup = styled('div', {
-  marginBottom: '$4',
+const LabelCaps = styled('span', {
+  fontFamily: '$space', fontSize: '12px', fontWeight: 600, letterSpacing: '0.2em', textTransform: 'uppercase',
+  opacity: 0.8,
+  variants: { color: { primary: { color: '$primaryContainer' }, secondary: { color: '$secondaryContainer' } } }
 });
 
-const FormLabel = styled('label', {
-  fontSize: '$2',
-  fontWeight: 'bold',
-  display: 'block',
-  marginBottom: '$2',
-});
-
-const HintButtons = styled('div', {
-  display: 'flex',
-  gap: '$2',
-});
-
-const HintButton = styled('button', {
-  flex: 1,
-  padding: '$3',
-  borderRadius: '$2',
-  border: '1px solid $border',
-  backgroundColor: '$background',
-  color: '$foreground',
-  fontWeight: 'bold',
-  transition: 'all 0.2s',
-  '&:hover': {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
+const HintBtn = styled('button', {
+  borderRadius: '$2', padding: '$4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+  gap: '8px', fontFamily: '$space', fontSize: '11px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase',
+  backgroundColor: 'transparent', transition: 'all 0.3s', border: '1px solid rgba(255,255,255,0.1)', color: '$onSurface',
+  '&:hover': { backgroundColor: 'rgba(255,255,255,0.05)' },
+  '&:disabled': { opacity: 0.5, cursor: 'not-allowed' },
   variants: {
     active: {
-      less: { backgroundColor: '$primary', color: '#fff', borderColor: '$primary' },
-      more: { backgroundColor: '$primary', color: '#fff', borderColor: '$primary' },
-      correct: { backgroundColor: '$success', color: '#fff', borderColor: '$success' },
+      cyan: { backgroundColor: 'rgba(0, 240, 255, 0.2)', borderColor: '$primaryContainer', color: '$primaryContainer', boxShadow: '$glowCyan' },
+      magenta: { backgroundColor: 'rgba(254, 0, 254, 0.2)', borderColor: '$secondaryContainer', color: '$secondaryContainer', boxShadow: '$glowMagenta' },
+      green: { backgroundColor: 'rgba(0, 250, 100, 0.2)', borderColor: '$tertiaryContainer', color: '$tertiaryContainer', boxShadow: '$glowGreen' },
     }
   }
+});
+
+const GlowingInputWrapper = styled('div', {
+  position: 'relative', backgroundColor: 'rgba(14, 14, 14, 0.4)', borderRadius: '$1', border: '1px solid rgba(59, 73, 75, 0.3)', padding: '8px',
+});
+
+const GlowingInput = styled('input', {
+  width: '100%', backgroundColor: 'transparent', border: 'none', borderBottom: '2px solid rgba(254, 0, 254, 0.5)',
+  fontFamily: '$mono', fontSize: '48px', textAlign: 'center', color: '#fff', padding: '$2', outline: 'none', fontWeight: 700,
+  transition: 'all 0.3s', textShadow: '0 0 15px rgba(254, 0, 254, 0.4)',
+  '&::placeholder': { color: '$surfaceContainerHighest', fontWeight: 400, textShadow: 'none' },
+  '&:focus': { borderColor: '$secondaryContainer' },
+  '&:disabled': { opacity: 0.5 }
+});
+
+const SecondaryInput = styled('input', {
+  width: '100%', backgroundColor: 'transparent', border: 'none', borderBottom: '2px solid rgba(0, 240, 255, 0.5)',
+  fontFamily: '$mono', fontSize: '24px', textAlign: 'center', color: '#fff', padding: '$2', outline: 'none', fontWeight: 700,
+  transition: 'all 0.3s', textShadow: '0 0 15px rgba(0, 240, 255, 0.4)',
+  '&::placeholder': { color: '$surfaceContainerHighest', fontWeight: 400, textShadow: 'none' },
+  '&:focus': { borderColor: '$primaryContainer' },
+  '&:disabled': { opacity: 0.5 }
+});
+
+const ActionBtn = styled('button', {
+  width: '100%', backgroundColor: 'rgba(53, 53, 52, 0.3)', border: '1px solid rgba(59, 73, 75, 0.5)',
+  color: '$onSurfaceVariant', borderRadius: '$1', padding: '$4', fontFamily: '$space', fontSize: '12px',
+  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', textTransform: 'uppercase',
+  letterSpacing: '0.15em', transition: 'all 0.3s', boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)', fontWeight: 'bold',
+  '&:hover:not(:disabled)': { borderColor: '$primaryContainer', backgroundColor: 'rgba(0, 240, 255, 0.1)', color: '$primaryContainer' },
+  '&:disabled': { opacity: 0.5, cursor: 'not-allowed' },
+  variants: {
+    primary: {
+      true: { backgroundColor: 'rgba(0, 240, 255, 0.2)', color: '$primaryContainer', borderColor: '$primaryContainer' }
+    }
+  }
+});
+
+const MessageArea = styled('div', {
+  width: '100%', maxWidth: '768px', backgroundColor: 'rgba(19,19,19,0.4)', backdropFilter: 'blur(10px)',
+  borderRadius: '$1', padding: '$4', marginTop: '$6', position: 'relative', overflow: 'hidden',
+  border: '1px solid rgba(0, 240, 255, 0.3)', borderLeft: '4px solid $primaryContainer',
+});
+
+const JoinCard = styled('div', {
+  backgroundColor: 'rgba(19, 19, 19, 0.6)', backdropFilter: 'blur(20px)', border: '1px solid rgba(0, 240, 255, 0.3)',
+  borderRadius: '$4', padding: '$6', width: '100%', maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '$4',
+  boxShadow: '$glowCyanInset'
+});
+
+const JoinLabel = styled('label', {
+  fontFamily: '$space', fontSize: '12px', fontWeight: 600, letterSpacing: '0.1em', textTransform: 'uppercase',
+  color: '$primaryContainer', marginBottom: '$2', display: 'block'
 });
 
 export default function GamePage({ params }: { params: Promise<{ gameId: string }> }) {
@@ -202,10 +207,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   const searchParams = useSearchParams();
   const isHost = searchParams.get("host") === "true";
   
-  // Clock
-  const [time, setTime] = useState(new Date());
-
-  // Game State
+  const [elapsed, setElapsed] = useState("00:00");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   
@@ -213,6 +215,11 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   const [player2Secret, setPlayer2Secret] = useState("");
   const [gameStatus, setGameStatus] = useState("");
   const [totalAttempts, setTotalAttempts] = useState(0);
+  const [maxAttempts, setMaxAttempts] = useState(10);
+  const [player1Name, setPlayer1Name] = useState("Player 1");
+  const [player2Name, setPlayer2Name] = useState("Player 2");
+  const [startedAt, setStartedAt] = useState<string | null>(null);
+  const [endedAt, setEndedAt] = useState<string | null>(null);
   
   const [currentGuess, setCurrentGuess] = useState("");
   const [player1CurrentGuess, setPlayer1CurrentGuess] = useState("");
@@ -221,29 +228,47 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
 
   const prevStatusRef = useRef(gameStatus);
 
-  // Input States
+  const [joinName, setJoinName] = useState("");
   const [joinSecret, setJoinSecret] = useState("");
   const [joinGuess, setJoinGuess] = useState("");
   const [turnGuess, setTurnGuess] = useState("");
   const [turnHint, setTurnHint] = useState<"less" | "more" | "correct" | "">("");
   const [submitting, setSubmitting] = useState(false);
 
+  const [customHintRequested, setCustomHintRequested] = useState(false);
+  const [customHintInput, setCustomHintInput] = useState("");
+  const [receivedCustomHint, setReceivedCustomHint] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'info' | 'error', id: number} | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'info' | 'error' = 'info') => {
+    const id = Date.now();
+    setToast({ message, type, id });
+    setTimeout(() => {
+      setToast(current => current?.id === id ? null : current);
+    }, 3000);
+  };
+
   const channelRef = useRef<any>(null);
 
   useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (!startedAt) return;
+    const interval = setInterval(() => {
+      const start = new Date(startedAt).getTime();
+      const end = endedAt ? new Date(endedAt).getTime() : Date.now();
+      const diff = Math.floor((end - start) / 1000);
+      if (diff < 0) return;
+      const m = Math.floor(diff / 60).toString().padStart(2, '0');
+      const s = (diff % 60).toString().padStart(2, '0');
+      setElapsed(`${m}:${s}`);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt, endedAt]);
 
   useEffect(() => {
     const fetchGame = async () => {
       try {
-        const { data, error: fetchError } = await supabase
-          .from('games')
-          .select('*')
-          .eq('id', gameId)
-          .single();
-          
+        const { data, error: fetchError } = await supabase.from('games').select('*').eq('id', gameId).single();
         if (fetchError || !data) {
           setError("Game not found or has expired.");
         } else {
@@ -251,6 +276,11 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
           setPlayer2Secret(data.player_2_secret_number || "");
           setGameStatus(data.game_status || "waiting_player_2");
           setTotalAttempts(data.total_attempts || 0);
+          setMaxAttempts(data.max_attempts || 10);
+          if (data.player_1_name) setPlayer1Name(data.player_1_name);
+          if (data.player_2_name) setPlayer2Name(data.player_2_name);
+          if (data.started_at) setStartedAt(data.started_at);
+          if (data.ended_at) setEndedAt(data.ended_at);
           setCurrentGuess(data.current_guess || "");
           setPlayer1CurrentGuess(data.player_1_current_guess || "");
           setHint(data.hint || "");
@@ -265,113 +295,106 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
     };
     fetchGame();
 
-    const channel = supabase
-      .channel(`game-${gameId}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'games',
-          filter: `id=eq.${gameId}`
-        },
-        (payload) => {
-          const newState = payload.new;
-          if (newState.secret_number) setSecretNumber(newState.secret_number);
-          if (newState.player_2_secret_number) setPlayer2Secret(newState.player_2_secret_number);
-          if (newState.total_attempts !== undefined) setTotalAttempts(newState.total_attempts);
-          if (newState.current_guess) setCurrentGuess(newState.current_guess);
-          if (newState.player_1_current_guess) setPlayer1CurrentGuess(newState.player_1_current_guess);
-          if (newState.hint) setHint(newState.hint);
-          if (newState.player_2_hint) setPlayer2Hint(newState.player_2_hint);
-          
-          if (newState.game_status) {
-            const newStatus = newState.game_status;
-            setGameStatus(newStatus);
-            
-            if (newStatus !== prevStatusRef.current) {
-               if (newStatus === 'player_1_won' || newStatus === 'player_2_won') {
-                 playWinSound();
-               } else if (newStatus === 'ended_manually' || newStatus === 'draw') {
-                 playEndSound();
-               }
-               prevStatusRef.current = newStatus;
-            }
+    const channel = supabase.channel(`game-${gameId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'games', filter: `id=eq.${gameId}` }, (payload) => {
+        const newState = payload.new;
+        if (newState.secret_number) setSecretNumber(newState.secret_number);
+        if (newState.player_2_secret_number) setPlayer2Secret(newState.player_2_secret_number);
+        if (newState.total_attempts !== undefined) setTotalAttempts(newState.total_attempts);
+        if (newState.current_guess) setCurrentGuess(newState.current_guess);
+        if (newState.player_1_current_guess) setPlayer1CurrentGuess(newState.player_1_current_guess);
+        if (newState.hint) setHint(newState.hint);
+        if (newState.player_2_hint) setPlayer2Hint(newState.player_2_hint);
+        if (newState.player_1_name) setPlayer1Name(newState.player_1_name);
+        if (newState.player_2_name) setPlayer2Name(newState.player_2_name);
+        if (newState.started_at) setStartedAt(newState.started_at);
+        if (newState.ended_at) setEndedAt(newState.ended_at);
+        if (newState.game_status) {
+          const newStatus = newState.game_status;
+          setGameStatus(newStatus);
+          if (newStatus !== prevStatusRef.current) {
+             if (newStatus === 'player_1_won' || newStatus === 'player_2_won') playWinSound();
+             else if (newStatus === 'ended_manually' || newStatus === 'draw') playEndSound();
+             prevStatusRef.current = newStatus;
           }
-
-          setTurnGuess("");
-          setTurnHint("");
         }
-      )
-      .on(
-        'broadcast',
-        { event: 'request_hint' },
-        (payload) => {
-           const sender = payload.payload.sender;
-           if (sender !== (isHost ? 'host' : 'player2')) {
-             playHintSound();
-             alert("Your opponent is requesting a hint!");
-           }
-        }
-      )
+        setTurnGuess("");
+        setTurnHint("");
+      })
+      .on('broadcast', { event: 'request_hint' }, (payload) => {
+         const sender = payload.payload.sender;
+         if (sender !== (isHost ? 'host' : 'player2')) {
+           playHintSound();
+           setCustomHintRequested(true);
+         }
+      })
+      .on('broadcast', { event: 'send_hint' }, (payload) => {
+         const sender = payload.payload.sender;
+         if (sender !== (isHost ? 'host' : 'player2')) {
+           playHintSound();
+           setReceivedCustomHint(payload.payload.message);
+         }
+      })
+      .on('broadcast', { event: 'nudge' }, (payload) => {
+         const sender = payload.payload.sender;
+         if (sender !== (isHost ? 'host' : 'player2')) {
+           playHintSound();
+           showToast("Your opponent nudged you to hurry up!", "info");
+         }
+      })
       .subscribe();
 
     channelRef.current = channel;
     return () => { supabase.removeChannel(channel); };
   }, [gameId, isHost]);
 
-  // REDIRECT TO REPORT ON GAME OVER
   useEffect(() => {
     const isGameOver = gameStatus === 'player_1_won' || gameStatus === 'player_2_won' || gameStatus === 'draw' || gameStatus === 'ended_manually';
-    if (isGameOver) {
-       router.push(`/report/${gameId}?host=${isHost}`);
-    }
+    if (isGameOver) router.push(`/report/${gameId}?host=${isHost}`);
   }, [gameStatus, gameId, isHost, router]);
 
-
   const handleJoinGame = async () => {
-    if (!joinSecret || !joinGuess) return;
+    if (!joinSecret || !joinGuess || !joinName) return;
     playClickSound();
     setSubmitting(true);
     try {
       const response = await fetch('/api/games/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, player2Secret: joinSecret, currentGuess: joinGuess })
+        body: JSON.stringify({ gameId, player2Secret: joinSecret, currentGuess: joinGuess, player2Name: joinName })
       });
       const data = await response.json();
-      if (data.error) alert(data.error);
+      if (data.error) showToast(data.error, "error");
       else playTurnSound();
     } catch (err) {
-      alert("Failed to join.");
+      showToast("Network error joining game", "error");
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleTurnSubmit = async () => {
+    if (!turnHint) return;
+    if (turnHint !== 'correct' && !turnGuess) return;
     playClickSound();
-    if (!turnHint) {
-      alert("Please provide a hint for the opponent's guess!");
-      return;
-    }
-    if (turnHint !== 'correct' && !turnGuess) {
-      alert("Please enter a guess for the opponent's secret!");
-      return;
-    }
     
     setSubmitting(true);
     try {
       const response = await fetch('/api/games/turn', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId, isHost, hint: turnHint, nextGuess: turnGuess })
+        body: JSON.stringify({ 
+          gameId, 
+          isHost, 
+          hint: turnHint, 
+          nextGuess: turnHint === 'correct' ? null : turnGuess 
+        })
       });
       const data = await response.json();
-      if (data.error) alert(data.error);
+      if (data.error) showToast(data.error, "error");
       else playTurnSound();
     } catch (err) {
-      alert("Failed to submit turn.");
+      showToast("Network error submitting turn", "error");
     } finally {
       setSubmitting(false);
     }
@@ -379,15 +402,12 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
 
   const handleEndGame = async () => {
     playClickSound();
-    if (!confirm("Are you sure you want to end the game?")) return;
-    try {
+    if (confirm("Are you sure you want to abort the game?")) {
       await fetch('/api/games/end', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId })
+        body: JSON.stringify({ gameId, reason: 'ended_manually' })
       });
-    } catch(err) {
-      alert("Failed to end game.");
     }
   };
 
@@ -395,12 +415,40 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
     playClickSound();
     if (channelRef.current) {
       await channelRef.current.send({
-        type: 'broadcast',
-        event: 'request_hint',
-        payload: { sender: isHost ? 'host' : 'player2' }
+        type: 'broadcast', event: 'request_hint', payload: { sender: isHost ? 'host' : 'player2' }
       });
-      alert("Hint requested!");
+      showToast("Hint requested!", "success");
     }
+  };
+
+  const handleSendCustomHint = async () => {
+    if (!customHintInput) return;
+    playClickSound();
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast', event: 'send_hint', payload: { sender: isHost ? 'host' : 'player2', message: customHintInput }
+      });
+      setCustomHintRequested(false);
+      setCustomHintInput("");
+    }
+  };
+
+  const handleNudge = async () => {
+    playClickSound();
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: 'broadcast', event: 'nudge', payload: { sender: isHost ? 'host' : 'player2' }
+      });
+      showToast("Nudge sent!", "success");
+    }
+  };
+
+  const handleCopy = () => {
+    playClickSound();
+    navigator.clipboard.writeText(`${window.location.origin}/game/${gameId}`);
+    setCopied(true);
+    showToast("Link copied to clipboard!", "success");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleHintSelection = (h: "less" | "more" | "correct") => {
@@ -408,123 +456,256 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
     setTurnHint(h);
   };
 
-  if (loading) return <Container css={{justifyContent: 'center'}}><Title>Loading game...</Title></Container>;
-  if (error) return <Container css={{justifyContent: 'center'}}><Title css={{color: '$error'}}>{error}</Title></Container>;
-
-  const isGameOver = gameStatus === 'player_1_won' || gameStatus === 'player_2_won' || gameStatus === 'draw' || gameStatus === 'ended_manually';
-  if (isGameOver) return <Container css={{justifyContent: 'center'}}><Title>Redirecting to report...</Title></Container>;
+  if (loading) return <Root css={{justifyContent: 'center', alignItems: 'center'}}><Title>Loading...</Title></Root>;
+  if (error) return <Root css={{justifyContent: 'center', alignItems: 'center'}}><Title css={{color: '$error'}}>{error}</Title></Root>;
 
   const isMyTurn = (isHost && gameStatus === 'player_1_turn') || (!isHost && gameStatus === 'player_2_turn');
+  const activeOpponentName = isHost ? player2Name : player1Name;
 
   return (
-    <Container>
+    <Root>
+      {toast && (
+        <ToastContainer>
+          <ToastMessage type={toast.type} key={toast.id}>
+            {toast.message}
+          </ToastMessage>
+        </ToastContainer>
+      )}
+      
       <Header>
-        <div>
-          <Title>Two-Way Number Guessing</Title>
-          <Badge role={isHost ? 'host' : 'guest'}>
-            {isHost ? 'PLAYER 1 (HOST)' : 'PLAYER 2'}
-          </Badge>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <SysBadge>PLAYING AS: {isHost ? 'HOST' : 'PLAYER 2'}</SysBadge>
+          <div style={{ color: 'var(--onSurfaceVariant)' }}>{isHost ? `${player1Name}` : `${player2Name}`}</div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-           <div style={{ fontSize: '20px', fontWeight: 700 }}>
-             {time.toLocaleTimeString()}
-           </div>
-           <Button variant="dangerText" onClick={handleEndGame}>
-             End Game
-           </Button>
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <Title>Two-Way Number Guessing</Title>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--primaryContainer)', backgroundColor: 'rgba(0,240,255,0.1)', padding: '4px 12px', borderRadius: '4px', border: '1px solid rgba(0,240,255,0.3)' }}>
+             <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>timer</span>
+             <span style={{ fontFamily: 'var(--fonts-mono)', fontSize: '16px', fontWeight: 'bold', letterSpacing: '0.1em', textShadow: '0 0 5px rgba(0,240,255,0.8)' }}>
+               {elapsed}
+             </span>
+          </div>
+          <AbortBtn onClick={handleEndGame}>End Game</AbortBtn>
         </div>
       </Header>
 
       <Main>
-        <Card>
-          <TopBar>
-            <div>
-              <Label>Your Secret</Label>
-              <Value>{isHost ? secretNumber : (player2Secret || "Not set")}</Value>
-            </div>
-            <div style={{ textAlign: 'right' }}>
-              <Label>Turn</Label>
-              <Value>{totalAttempts} / 10</Value>
-            </div>
-          </TopBar>
-
-          {gameStatus === 'waiting_player_2' && (
-            <div style={{ textAlign: 'center' }}>
-              {isHost ? (
+        {gameStatus === 'waiting_player_2' && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            {isHost ? (
+              <JoinCard>
+                <Title css={{ fontSize: '$4', textAlign: 'center', marginBottom: '$4' }}>Waiting for Player 2...</Title>
+                <LabelCaps css={{ textAlign: 'center', color: '$onSurfaceVariant' }}>Share this link with Player 2:</LabelCaps>
+                <div style={{ padding: '16px', background: 'rgba(0,0,0,0.5)', borderRadius: '8px', wordBreak: 'break-all', border: '1px solid var(--outlineVariant)', textAlign: 'center' }}>
+                  <a href={`${window.location.origin}/game/${gameId}`} style={{ color: 'var(--primaryContainer)', fontFamily: 'var(--fonts-mono)' }}>{`${window.location.origin}/game/${gameId}`}</a>
+                </div>
+                <ActionBtn primary={true} onClick={handleCopy} css={{ marginTop: '$4' }}>
+                   <span className="material-symbols-outlined">content_copy</span>
+                   {copied ? 'Link Copied!' : 'Copy Link'}
+                </ActionBtn>
+              </JoinCard>
+            ) : (
+              <JoinCard>
+                <Title css={{ fontSize: '$4', textAlign: 'center', marginBottom: '$4' }}>Join Game</Title>
                 <div>
-                  <h3 style={{ marginBottom: '16px' }}>Waiting for Player 2 to join...</h3>
-                  <p style={{ fontSize: '14px', color: 'var(--foreground)', opacity: 0.8, marginBottom: '8px' }}>Share this link:</p>
-                  <div style={{ padding: '12px', background: 'var(--background)', borderRadius: '8px', wordBreak: 'break-all', marginBottom: '16px', border: `1px solid var(--border)` }}>
-                    <a href={`${window.location.origin}/game/${gameId}`} style={{ color: 'var(--primary)', textDecoration: 'none' }}>{`${window.location.origin}/game/${gameId}`}</a>
+                  <JoinLabel>Your Name</JoinLabel>
+                  <SecondaryInput placeholder="e.g. Neo" value={joinName} onChange={e => setJoinName(e.target.value)} disabled={submitting} css={{ fontSize: '16px', padding: '12px' }} />
+                </div>
+                <div>
+                  <JoinLabel>Your Secret Number</JoinLabel>
+                  <SecondaryInput type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0-100" value={joinSecret} onChange={e => setJoinSecret(e.target.value.replace(/\D/g, ''))} disabled={submitting} css={{ fontSize: '24px' }} />
+                </div>
+                <div>
+                  <JoinLabel>First Guess for {player1Name}'s Secret</JoinLabel>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    <SecondaryInput type="text" inputMode="numeric" pattern="[0-9]*" placeholder="0-100" value={joinGuess} onChange={e => setJoinGuess(e.target.value.replace(/\D/g, ''))} disabled={submitting} css={{ fontSize: '24px', flex: 1 }} />
+                    <ActionBtn onClick={handleRequestHint} css={{ flex: '0 0 auto', width: 'auto' }}>
+                       <span className="material-symbols-outlined">lightbulb</span> Hint
+                    </ActionBtn>
                   </div>
-                  <Button onClick={() => { playClickSound(); navigator.clipboard.writeText(`${window.location.origin}/game/${gameId}`); }}>
-                    Copy Link
-                  </Button>
                 </div>
-              ) : (
-                <div style={{ textAlign: 'left' }}>
-                  <h3 style={{ marginBottom: '24px', textAlign: 'center' }}>Join the Game</h3>
-                  <FormGroup>
-                    <FormLabel>Set your Secret Number</FormLabel>
-                    <Input type="password" placeholder="e.g. 55" value={joinSecret} onChange={e => setJoinSecret(e.target.value.replace(/\D/g, ''))} disabled={submitting} />
-                  </FormGroup>
-                  <FormGroup>
-                    <FormLabel>Make your first guess of Player 1's secret</FormLabel>
-                    <Input type="text" placeholder="e.g. 42" value={joinGuess} onChange={e => setJoinGuess(e.target.value.replace(/\D/g, ''))} disabled={submitting} />
-                  </FormGroup>
-                  <Button onClick={handleJoinGame} disabled={submitting || !joinSecret || !joinGuess}>
-                    {submitting ? 'Joining...' : 'Join Game'}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+                {receivedCustomHint && (
+                  <MessageArea>
+                    <LabelCaps color="primary">Message from {player1Name}</LabelCaps>
+                    <div style={{ fontFamily: 'var(--fonts-mono)', fontStyle: 'italic', marginTop: '8px' }}>"{receivedCustomHint}"</div>
+                    <button onClick={() => setReceivedCustomHint('')} style={{ position: 'absolute', top: '8px', right: '8px', background: 'transparent', color: '#fff', border: 'none', cursor: 'pointer' }}>✕</button>
+                  </MessageArea>
+                )}
+                <ActionBtn primary={true} onClick={handleJoinGame} disabled={submitting || !joinSecret || !joinGuess || !joinName} css={{ marginTop: '$4', fontSize: '14px', padding: '$3' }}>
+                  {submitting ? 'Connecting...' : 'Join'}
+                </ActionBtn>
+              </JoinCard>
+            )}
+          </div>
+        )}
 
-          {gameStatus !== 'waiting_player_2' && (
-            <div>
-               {isMyTurn ? (
-                  <div>
-                    <HintBox>
-                      <h3 style={{ fontSize: '16px', marginBottom: '8px' }}>Opponent guessed your secret is: <span style={{ fontSize: '24px', color: 'var(--primary)' }}>{isHost ? currentGuess : player1CurrentGuess}</span></h3>
+        {gameStatus !== 'waiting_player_2' && (
+          <>
+            <StatsBar>
+              <CornerAccent pos="tl" color="tertiary" />
+              <CornerAccent pos="bl" color="tertiary" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div style={{ padding: '8px', backgroundColor: 'rgba(0, 250, 100, 0.1)', borderRadius: '4px', border: '1px solid rgba(0, 250, 100, 0.3)' }}>
+                  <span className="material-symbols-outlined" style={{ color: 'var(--tertiaryContainer)' }}>vpn_key</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <LabelCaps>Secret Number</LabelCaps>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                    <span style={{ fontFamily: 'var(--fonts-mono)', opacity: 0.7 }}>VAL:</span>
+                    <span style={{ fontFamily: 'var(--fonts-mono)', fontSize: '28px', color: 'var(--tertiaryContainer)', fontWeight: 'bold', textShadow: '0 0 12px rgba(0,250,100,0.6)' }}>
+                      {isHost ? secretNumber : player2Secret}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                <LabelCaps>Attempts</LabelCaps>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  <div style={{ width: '256px', height: '8px', backgroundColor: 'var(--surfaceContainerHighest)', borderRadius: '99px', overflow: 'hidden', border: '1px solid var(--outlineVariant)' }}>
+                    <div style={{ height: '100%', width: `${(totalAttempts / maxAttempts) * 100}%`, background: 'linear-gradient(to right, var(--primary), var(--primaryContainer))', boxShadow: '0 0 10px rgba(0,240,255,0.8)' }}></div>
+                  </div>
+                  <span style={{ fontFamily: 'var(--fonts-mono)', fontSize: '18px', fontWeight: 'bold', textShadow: '0 0 8px rgba(0,240,255,0.5)' }}>
+                    <span style={{ color: 'var(--primaryContainer)' }}>{totalAttempts.toString().padStart(2, '0')}</span>
+                    <span style={{ color: 'var(--onSurfaceVariant)' }}>/{maxAttempts}</span>
+                  </span>
+                </div>
+              </div>
+              <CornerAccent pos="tr" color="primary" />
+              <CornerAccent pos="br" color="primary" />
+            </StatsBar>
+
+            <GridPanel>
+              <Panel variant="primary" className="group">
+                <CornerAccent pos="tl" color="primary" />
+                <CornerAccent pos="tr" color="primary" />
+                <CornerAccent pos="bl" color="primary" />
+                <CornerAccent pos="br" color="primary" />
+                <PanelGlow pos="right" color="primary" />
+                
+                <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', backgroundColor: 'var(--primaryContainer)', borderRadius: '50%', boxShadow: '0 0 8px rgba(0,240,255,0.8)', animation: `${pulse} 2s infinite` }}></div>
+                    <LabelCaps color="primary">OPPONENT'S LAST GUESS</LabelCaps>
+                  </div>
+                  <h2 style={{ fontFamily: 'var(--fonts-space)', fontSize: '32px', fontWeight: 'bold', textTransform: 'uppercase', margin: '8px 0 0 0' }}>
+                    {activeOpponentName}'s Guess: 
+                    <span style={{ fontFamily: 'var(--fonts-mono)', fontSize: '48px', color: 'var(--primaryContainer)', textShadow: '0 0 20px rgba(0,240,255,0.6)', marginLeft: '12px', verticalAlign: 'middle' }}>
+                      {isHost ? currentGuess : player1CurrentGuess}
+                    </span>
+                  </h2>
+                </div>
+
+                {isMyTurn ? (
+                  <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', minHeight: '120px' }}>
+                    <HintBtn active={turnHint === 'less' ? 'magenta' : undefined} onClick={() => handleHintSelection('less')}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>keyboard_arrow_down</span>
+                      Too High
+                    </HintBtn>
+                    <HintBtn active={turnHint === 'more' ? 'cyan' : undefined} onClick={() => handleHintSelection('more')}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>keyboard_arrow_up</span>
+                      Too Low
+                    </HintBtn>
+                    <HintBtn active={turnHint === 'correct' ? 'green' : undefined} onClick={() => handleHintSelection('correct')}>
+                      <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>done_all</span>
+                      Match
+                    </HintBtn>
+                  </div>
+                ) : (
+                  <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', padding: '24px 0', textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                     <LabelCaps color="primary">Waiting for {activeOpponentName}...</LabelCaps>
+                  </div>
+                )}
+              </Panel>
+
+              <Panel variant="secondary" className="group">
+                <CornerAccent pos="tl" color="secondary" />
+                <CornerAccent pos="tr" color="secondary" />
+                <CornerAccent pos="bl" color="secondary" />
+                <CornerAccent pos="br" color="secondary" />
+                <PanelGlow pos="left" color="secondary" />
+
+                <div style={{ position: 'relative', zIndex: 10, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '8px', height: '8px', backgroundColor: 'var(--secondaryContainer)', borderRadius: '50%', boxShadow: '0 0 8px rgba(254,0,254,0.8)', animation: `${pulse} 2s infinite` }}></div>
+                    <LabelCaps color="secondary">YOUR TURN</LabelCaps>
+                  </div>
+                  <h2 style={{ fontFamily: 'var(--fonts-space)', fontSize: '22px', textTransform: 'uppercase', margin: '8px 0 0 0' }}>
+                    Make your guess and give a hint
+                  </h2>
+                </div>
+
+                <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  {isMyTurn ? (
+                    <>
                       {(isHost ? player2Hint : hint) && (
-                        <div style={{ marginTop: '16px', color: (isHost ? player2Hint : hint) === 'correct' ? 'var(--success)' : 'var(--error)' }}>
-                          Opponent said your previous guess was: <strong>{(isHost ? player2Hint : hint).toUpperCase()}</strong>
+                        <div style={{ padding: '8px', border: '1px solid var(--outlineVariant)', borderRadius: '4px', textAlign: 'center', color: (isHost ? player2Hint : hint) === 'correct' ? 'var(--tertiaryContainer)' : 'var(--secondaryContainer)' }}>
+                          Hint Received: {(isHost ? player2Hint : hint).toUpperCase()}
                         </div>
                       )}
-                    </HintBox>
-                    
-                    <FormGroup>
-                      <FormLabel>1. Hint for Opponent's guess:</FormLabel>
-                      <HintButtons>
-                        <HintButton active={turnHint === 'less' ? 'less' : undefined} onClick={() => handleHintSelection('less')}>Less</HintButton>
-                        <HintButton active={turnHint === 'more' ? 'more' : undefined} onClick={() => handleHintSelection('more')}>More</HintButton>
-                        <HintButton active={turnHint === 'correct' ? 'correct' : undefined} onClick={() => handleHintSelection('correct')}>Correct</HintButton>
-                      </HintButtons>
-                    </FormGroup>
-
-                    {turnHint !== 'correct' && (
-                      <FormGroup>
-                         <FormLabel>2. Your guess for Opponent's secret:</FormLabel>
-                         <div style={{ display: 'flex', gap: '8px' }}>
-                           <Input style={{ flex: 1 }} type="text" placeholder="Enter next guess..." value={turnGuess} onChange={e => setTurnGuess(e.target.value.replace(/\D/g, ''))} disabled={submitting} />
-                           <Button variant="outline" style={{ flex: '0 0 auto', width: 'auto' }} onClick={handleRequestHint}>Request Hint</Button>
-                         </div>
-                      </FormGroup>
-                    )}
-                    <Button onClick={handleTurnSubmit} disabled={submitting || !turnHint || (turnHint !== 'correct' && !turnGuess)} css={{marginTop: '$4'}}>
-                      {submitting ? 'Submitting...' : 'Submit Turn'}
-                    </Button>
+                      
+                      {turnHint !== 'correct' ? (
+                        <GlowingInputWrapper>
+                          <GlowingInput type="text" inputMode="numeric" pattern="[0-9]*" placeholder="--" value={turnGuess} onChange={e => setTurnGuess(e.target.value.replace(/\D/g, ''))} disabled={submitting} />
+                        </GlowingInputWrapper>
+                      ) : (
+                        <div style={{ padding: '24px', textAlign: 'center', border: '1px solid var(--tertiaryContainer)', color: 'var(--tertiaryContainer)', borderRadius: '4px', textShadow: '0 0 10px rgba(0,250,100,0.5)' }}>
+                           <span className="material-symbols-outlined" style={{ fontSize: '48px', marginBottom: '8px' }}>verified</span>
+                           <div>Match confirmed. Submit turn.</div>
+                        </div>
+                      )}
+                      
+                      <div style={{ display: 'flex', gap: '16px' }}>
+                        <ActionBtn onClick={handleRequestHint}>
+                          <span className="material-symbols-outlined">lightbulb</span> Request Hint
+                        </ActionBtn>
+                        <ActionBtn primary={true} onClick={handleTurnSubmit} disabled={submitting || !turnHint || (turnHint !== 'correct' && !turnGuess)}>
+                          <span className="material-symbols-outlined">send</span> {submitting ? 'Submitting' : 'Submit'}
+                        </ActionBtn>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ textAlign: 'center' }}>
+                      {customHintRequested ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                          <LabelCaps color="secondary">Hint Requested by {activeOpponentName}</LabelCaps>
+                          <SecondaryInput type="text" maxLength={50} placeholder="Type hint here" value={customHintInput} onChange={e => setCustomHintInput(e.target.value)} />
+                          <ActionBtn primary={true} onClick={handleSendCustomHint}>Send Hint</ActionBtn>
+                        </div>
+                      ) : (
+                        <ActionBtn onClick={handleNudge}>
+                          <span className="material-symbols-outlined">notifications_active</span> Nudge Opponent
+                        </ActionBtn>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Panel>
+            </GridPanel>
+            
+            {receivedCustomHint && (
+              <MessageArea>
+                <button onClick={() => setReceivedCustomHint('')} aria-label="Close Message" style={{ position: 'absolute', top: '16px', right: '16px', background: 'transparent', border: 'none', color: 'var(--onSurfaceVariant)', cursor: 'pointer' }}>
+                  <span className="material-symbols-outlined">close</span>
+                </button>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', position: 'relative', zIndex: 10 }}>
+                  <div style={{ backgroundColor: 'rgba(0, 240, 255, 0.1)', padding: '8px', borderRadius: '4px', border: '1px solid rgba(0, 240, 255, 0.3)', boxShadow: '0 0 10px rgba(0,240,255,0.2)' }}>
+                    <span className="material-symbols-outlined" style={{ color: 'var(--primaryContainer)' }}>chat</span>
                   </div>
-               ) : (
-                  <div style={{ textAlign: 'center', padding: '32px 0' }}>
-                    <h3 style={{ color: 'var(--foreground)', opacity: 0.8, marginBottom: '24px' }}>Waiting for Opponent to play their turn...</h3>
-                    <Button variant="outline" onClick={handleRequestHint}>Nudge / Request Hint</Button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <LabelCaps color="primary">Message from {activeOpponentName}</LabelCaps>
+                    <p style={{ fontFamily: 'var(--fonts-mono)', fontSize: '15px', color: '#fff', fontStyle: 'italic', borderLeft: '2px solid rgba(0,240,255,0.5)', paddingLeft: '12px', margin: '4px 0' }}>
+                      "{receivedCustomHint}"
+                    </p>
                   </div>
-               )}
-            </div>
-          )}
-        </Card>
+                </div>
+              </MessageArea>
+            )}
+          </>
+        )}
       </Main>
-    </Container>
+    </Root>
   );
 }

@@ -3,11 +3,13 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
-    const { secret } = await request.json();
+    const { secret, playerName, maxAttempts } = await request.json();
     
     if (!secret || isNaN(Number(secret))) {
       return NextResponse.json({ error: 'Invalid secret number' }, { status: 400 });
     }
+    
+    const attempts = maxAttempts ? parseInt(maxAttempts, 10) : 10;
 
     // Insert into Supabase
     const { data, error } = await supabase
@@ -16,7 +18,9 @@ export async function POST(request: Request) {
         { 
           secret_number: String(secret),
           game_status: 'waiting_player_2',
-          total_attempts: 0
+          total_attempts: 0,
+          max_attempts: attempts,
+          player_1_name: playerName || 'Player 1'
         }
       ])
       .select('id')

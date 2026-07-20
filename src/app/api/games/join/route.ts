@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
-    const { gameId, player2Secret, currentGuess } = await request.json();
+    const { gameId, player2Secret, currentGuess, player2Name } = await request.json();
 
     if (!gameId) {
       return NextResponse.json({ error: 'Game not found' }, { status: 404 });
@@ -23,7 +23,9 @@ export async function POST(request: Request) {
       .update({ 
         player_2_secret_number: String(player2Secret),
         current_guess: String(currentGuess),
-        game_status: 'player_1_turn'
+        game_status: 'player_1_turn',
+        player_2_name: player2Name || 'Player 2',
+        started_at: new Date().toISOString()
       })
       .eq('id', gameId)
       .eq('game_status', 'waiting_player_2'); // Ensure it's in the correct state

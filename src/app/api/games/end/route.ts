@@ -12,7 +12,7 @@ export async function POST(request: Request) {
     // Update the game status to 'ended_manually'
     const { error: updateError } = await supabase
       .from('games')
-      .update({ game_status: 'ended_manually' })
+      .update({ game_status: 'ended_manually', ended_at: new Date().toISOString() })
       .eq('id', gameId);
 
     if (updateError) {

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     // Fetch current game state to get total_attempts
     const { data: game, error: fetchError } = await supabase
       .from('games')
-      .select('total_attempts, game_status')
+      .select('total_attempts, game_status, max_attempts')
       .eq('id', gameId)
       .single();
 
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
 
     let updateData: any = {};
     let currentAttempts = game.total_attempts || 0;
-    const MAX_ATTEMPTS = 10;
+    const MAX_ATTEMPTS = game.max_attempts || 10;
 
     if (isHost) {
       // Player 1's turn
@@ -37,6 +37,7 @@ export async function POST(request: Request) {
       if (hint === 'correct') {
         updateData.hint = hint;
         updateData.game_status = 'player_2_won';
+        updateData.ended_at = new Date().toISOString();
       } else {
         if (!nextGuess || isNaN(Number(nextGuess))) {
           return NextResponse.json({ error: 'Invalid guess' }, { status: 400 });
@@ -54,6 +55,7 @@ export async function POST(request: Request) {
       if (hint === 'correct') {
         updateData.player_2_hint = hint;
         updateData.game_status = 'player_1_won';
+        updateData.ended_at = new Date().toISOString();
       } else {
         if (!nextGuess || isNaN(Number(nextGuess))) {
           return NextResponse.json({ error: 'Invalid guess' }, { status: 400 });
@@ -65,6 +67,7 @@ export async function POST(request: Request) {
         
         if (currentAttempts >= MAX_ATTEMPTS) {
           updateData.game_status = 'draw';
+          updateData.ended_at = new Date().toISOString();
         } else {
           updateData.game_status = 'player_1_turn';
         }
