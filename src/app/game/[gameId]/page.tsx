@@ -384,26 +384,16 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
     }
   };
 
-  // Auto-evaluate hint
-  useEffect(() => {
-    const isMyTurn = isHost ? gameStatus === 'player_1_turn' : gameStatus === 'player_2_turn';
-    const opponentGuessStr = isHost ? currentGuess : player1CurrentGuess;
-    const mySecretStr = isHost ? secretNumber : player2Secret;
-    const haveIWon = isHost ? player2Hint === 'correct' : hint === 'correct';
-
-    if (isMyTurn && opponentGuessStr && mySecretStr) {
-      const opp = parseInt(opponentGuessStr);
-      const sec = parseInt(mySecretStr);
-      if (!isNaN(opp) && !isNaN(sec)) {
-        if (opp < sec) setTurnHint('more');
-        else if (opp > sec) setTurnHint('less');
-        else setTurnHint('correct');
-      }
-    }
-  }, [gameStatus, isHost, currentGuess, player1CurrentGuess, secretNumber, player2Secret, player2Hint, hint]);
+  // Auto-evaluate hint removed for manual evaluation
 
   const handleTurnSubmit = async () => {
-    if (!turnHint) return;
+    const opponentHasWon = isHost ? hint === 'correct' : player2Hint === 'correct';
+    const actualTurnHint = opponentHasWon ? 'correct' : turnHint;
+
+    if (!actualTurnHint) {
+      showToast("Please evaluate the opponent's guess first!", "error");
+      return;
+    }
     
     const haveIWon = isHost ? player2Hint === 'correct' : hint === 'correct';
     if (!haveIWon && !turnGuess) return;
@@ -418,7 +408,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
         body: JSON.stringify({ 
           gameId, 
           isHost, 
-          hint: turnHint, 
+          hint: actualTurnHint, 
           nextGuess: !haveIWon ? turnGuess : null
         })
       });
@@ -494,6 +484,7 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
   const isMyTurn = (isHost && gameStatus === 'player_1_turn') || (!isHost && gameStatus === 'player_2_turn');
   const activeOpponentName = isHost ? player2Name : player1Name;
   const opponentHasWon = isHost ? hint === 'correct' : player2Hint === 'correct';
+  const haveIWon = isHost ? player2Hint === 'correct' : hint === 'correct';
 
   return (
     <Root>
@@ -631,22 +622,29 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                 {isMyTurn ? (
                   opponentHasWon ? (
                     <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', padding: '24px 0', textAlign: 'center', minHeight: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                       <LabelCaps color="primary">{activeOpponentName} is 1st! They are just watching now.</LabelCaps>
+                       <LabelCaps color="primary">{activeOpponentName} is 1st! Continue playing...</LabelCaps>
                     </div>
                   ) : (
-                    <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', minHeight: '120px' }}>
-                      <HintBtn active={turnHint === 'less' ? 'magenta' : undefined} style={{ pointerEvents: 'none' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>keyboard_double_arrow_down</span>
-                        {t('less')}
-                      </HintBtn>
-                      <HintBtn active={turnHint === 'more' ? 'cyan' : undefined} style={{ pointerEvents: 'none' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>keyboard_double_arrow_up</span>
-                        {t('more')}
-                      </HintBtn>
-                      <HintBtn active={turnHint === 'correct' ? 'green' : undefined} style={{ pointerEvents: 'none' }}>
-                        <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>done_all</span>
-                        {t('correct')}
-                      </HintBtn>
+                    <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', minHeight: '120px' }}>
+                      {turnHint === 'correct' && (
+                        <div style={{ color: 'var(--tertiaryContainer)', textAlign: 'center', fontWeight: 'bold' }}>
+                          {activeOpponentName} is 1st! Continue playing...
+                        </div>
+                      )}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+                        <HintBtn active={turnHint === 'less' ? 'magenta' : undefined} onClick={() => handleHintSelection('less')}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>keyboard_double_arrow_down</span>
+                          {t('less')}
+                        </HintBtn>
+                        <HintBtn active={turnHint === 'more' ? 'cyan' : undefined} onClick={() => handleHintSelection('more')}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>keyboard_double_arrow_up</span>
+                          {t('more')}
+                        </HintBtn>
+                        <HintBtn active={turnHint === 'correct' ? 'green' : undefined} onClick={() => handleHintSelection('correct')}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '28px' }}>done_all</span>
+                          {t('correct')}
+                        </HintBtn>
+                      </div>
                     </div>
                   )
                 ) : (
@@ -676,45 +674,32 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
                 <div style={{ position: 'relative', zIndex: 10, marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   {isMyTurn ? (
                     <>
-                      {(isHost ? player2Hint : hint) && (
+                      {(isHost ? player2Hint : hint) && !haveIWon && (
                         <div style={{ padding: '8px', border: '1px solid var(--outlineVariant)', borderRadius: '4px', textAlign: 'center', color: (isHost ? player2Hint : hint) === 'correct' ? 'var(--tertiaryContainer)' : 'var(--secondaryContainer)' }}>
                           {t('hintReceived', { HINT: t((isHost ? player2Hint : hint) || '') })}
                         </div>
                       )}
                       
-                      {(() => {
-                        const haveIWon = isHost ? player2Hint === 'correct' : hint === 'correct';
-                        return !haveIWon ? (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {turnHint === 'correct' && (
-                              <div style={{ color: 'var(--tertiaryContainer)', textAlign: 'center', fontWeight: 'bold' }}>
-                                {activeOpponentName} won! You can still finish your attempts.
-                              </div>
-                            )}
-                            <GlowingInputWrapper>
-                              <GlowingInput type="text" inputMode="numeric" pattern="[0-9]*" placeholder="--" value={turnGuess} onChange={e => setTurnGuess(e.target.value.replace(/\D/g, ''))} disabled={submitting} />
-                            </GlowingInputWrapper>
-                          </div>
-                        ) : (
-                          <div style={{ padding: '24px', textAlign: 'center', border: '1px solid var(--tertiaryContainer)', color: 'var(--tertiaryContainer)', borderRadius: '4px', textShadow: '0 0 10px rgba(0,250,100,0.5)' }}>
-                            <span className="material-symbols-outlined" style={{ fontSize: '48px', marginBottom: '8px' }}>verified</span>
-                            <div>You are 1st! Continue playing...</div>
-                          </div>
-                        );
-                      })()}
+                      {!haveIWon ? (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          <GlowingInputWrapper>
+                            <GlowingInput type="text" inputMode="numeric" pattern="[0-9]*" placeholder="--" value={turnGuess} onChange={e => setTurnGuess(e.target.value.replace(/\D/g, ''))} disabled={submitting} />
+                          </GlowingInputWrapper>
+                        </div>
+                      ) : (
+                        <div style={{ padding: '24px', textAlign: 'center', border: '1px solid var(--tertiaryContainer)', color: 'var(--tertiaryContainer)', borderRadius: '4px', textShadow: '0 0 10px rgba(0,250,100,0.5)' }}>
+                          <span className="material-symbols-outlined" style={{ fontSize: '48px', marginBottom: '8px' }}>verified</span>
+                          <div>You are 1st! Continue playing...</div>
+                        </div>
+                      )}
                       
                       <div style={{ display: 'flex', gap: '16px' }}>
                         <ActionBtn onClick={handleRequestHint}>
                           <span className="material-symbols-outlined">lightbulb</span> {t('requestHint')}
                         </ActionBtn>
-                        {(() => {
-                          const haveIWon = isHost ? player2Hint === 'correct' : hint === 'correct';
-                          return (
-                            <ActionBtn primary={true} onClick={handleTurnSubmit} disabled={submitting || !turnHint || (!haveIWon && !turnGuess)}>
-                              <span className="material-symbols-outlined">send</span> {submitting ? t('send') : t('send')}
-                            </ActionBtn>
-                          );
-                        })()}
+                        <ActionBtn primary={true} onClick={handleTurnSubmit} disabled={submitting || (!opponentHasWon && !turnHint) || (!haveIWon && !turnGuess)}>
+                          <span className="material-symbols-outlined">send</span> {submitting ? t('send') : t('send')}
+                        </ActionBtn>
                       </div>
                     </>
                   ) : (

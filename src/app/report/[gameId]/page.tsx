@@ -187,6 +187,14 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
               <StatValue>{gameData.player_2_secret_number || "N/A"}</StatValue>
             </StatBox>
             <StatBox>
+              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>psychology</span> {p1Name}'s Final Guess</StatLabel>
+              <StatValue>{gameData.player_1_current_guess || "N/A"}</StatValue>
+            </StatBox>
+            <StatBox>
+              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>psychology</span> {p2Name}'s Final Guess</StatLabel>
+              <StatValue>{gameData.current_guess || "N/A"}</StatValue>
+            </StatBox>
+            <StatBox>
               <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>autorenew</span> {t('totalTurns')}</StatLabel>
               <StatValue>{gameData.total_attempts} <span style={{fontSize: '14px', color: 'var(--onSurfaceVariant)'}}>/ {maxAttempts}</span></StatValue>
             </StatBox>
