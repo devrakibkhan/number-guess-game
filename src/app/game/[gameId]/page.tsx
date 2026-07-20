@@ -434,7 +434,21 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
       });
       const data = await response.json();
       if (data.error) showToast(data.error, "error");
-      else playTurnSound();
+      else {
+        playTurnSound();
+        if (data.status) setGameStatus(data.status);
+        
+        // Optimistic state updates
+        if (isHost) {
+          setHint(actualTurnHint);
+          if (!haveIWon) setPlayer1CurrentGuess(turnGuess);
+        } else {
+          setPlayer2Hint(actualTurnHint);
+          if (!haveIWon) setCurrentGuess(turnGuess);
+        }
+        setTurnHint("");
+        setTurnGuess("");
+      }
     } catch (err) {
       showToast("Network error submitting turn", "error");
     } finally {

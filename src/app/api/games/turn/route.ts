@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     // Fetch current game state to get total_attempts
     const { data: game, error: fetchError } = await supabase
       .from('games')
-      .select('total_attempts, game_status, max_attempts, hint, player_2_hint')
+      .select('total_attempts, game_status, max_attempts, hint, player_2_hint, player_1_won_at_attempt, player_2_won_at_attempt')
       .eq('id', gameId)
       .single();
 
@@ -47,6 +47,10 @@ export async function POST(request: Request) {
       const nowP1Won = p1HasWon;
       const nowP2Won = hint === 'correct';
 
+      if (nowP2Won && game.player_2_won_at_attempt == null) {
+        updateData.player_2_won_at_attempt = currentAttempts + 1;
+      }
+
       if (nowP1Won && nowP2Won) {
         updateData.game_status = 'draw';
         updateData.ended_at = new Date().toISOString();
@@ -74,6 +78,10 @@ export async function POST(request: Request) {
 
       const nowP1Won = hint === 'correct';
       const nowP2Won = p2HasWon;
+
+      if (nowP1Won && game.player_1_won_at_attempt == null) {
+        updateData.player_1_won_at_attempt = currentAttempts;
+      }
 
       if (nowP1Won && nowP2Won) {
         updateData.game_status = 'draw';

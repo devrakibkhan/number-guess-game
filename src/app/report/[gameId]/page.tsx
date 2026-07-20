@@ -147,20 +147,35 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
   let bannerText = "";
   let bannerIcon = "verified_user";
 
-  if (status === 'draw') {
-    bannerText = t('drawMsg');
-    bannerIcon = "balance";
-  } else if (status === 'ended_manually') {
+  const p1WonAt = gameData.player_1_won_at_attempt;
+  const p2WonAt = gameData.player_2_won_at_attempt;
+
+  if (status === 'ended_manually') {
     bannerText = t('gameEndedManually');
     bannerIcon = "cancel";
-  } else if (status === 'player_1_won') {
-    bannerStatus = isHost ? "win" : "lose";
-    bannerText = isHost ? t('youWon') : t('playerWon', { Name: p1Name });
-    bannerIcon = isHost ? "emoji_events" : "skull";
-  } else if (status === 'player_2_won') {
-    bannerStatus = !isHost ? "win" : "lose";
-    bannerText = !isHost ? t('youWon') : t('playerWon', { Name: p2Name });
-    bannerIcon = !isHost ? "emoji_events" : "skull";
+  } else if (p1WonAt || p2WonAt) {
+    if (p1WonAt && p2WonAt && p1WonAt === p2WonAt) {
+      bannerStatus = "draw";
+      bannerText = "IT'S A TIE FOR 1ST PLACE!";
+      bannerIcon = "balance";
+    } else {
+      const p1IsFirst = p1WonAt && (!p2WonAt || p1WonAt < p2WonAt);
+      const p2IsFirst = p2WonAt && (!p1WonAt || p2WonAt < p1WonAt);
+      
+      if (p1IsFirst) {
+        bannerStatus = isHost ? "win" : "lose";
+        bannerText = isHost ? "YOU WON 1ST PLACE!" : `${p1Name} WON 1ST PLACE!`;
+        bannerIcon = isHost ? "emoji_events" : "skull";
+      } else if (p2IsFirst) {
+        bannerStatus = !isHost ? "win" : "lose";
+        bannerText = !isHost ? "YOU WON 1ST PLACE!" : `${p2Name} WON 1ST PLACE!`;
+        bannerIcon = !isHost ? "emoji_events" : "skull";
+      }
+    }
+  } else {
+    bannerStatus = "draw";
+    bannerText = t('drawMsg');
+    bannerIcon = "balance";
   }
 
   return (
@@ -193,6 +208,14 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
             <StatBox>
               <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>psychology</span> {p2Name}'s Final Guess</StatLabel>
               <StatValue>{gameData.current_guess || "N/A"}</StatValue>
+            </StatBox>
+            <StatBox>
+              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>speed</span> {p1Name}'s Attempts</StatLabel>
+              <StatValue>{p1WonAt ? p1WonAt : "FAILED"}</StatValue>
+            </StatBox>
+            <StatBox>
+              <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>speed</span> {p2Name}'s Attempts</StatLabel>
+              <StatValue>{p2WonAt ? p2WonAt : "FAILED"}</StatValue>
             </StatBox>
             <StatBox>
               <StatLabel><span className="material-symbols-outlined" style={{ fontSize: '18px' }}>autorenew</span> {t('totalTurns')}</StatLabel>
