@@ -170,9 +170,7 @@ export default function ReportPage({ params }: { params: Promise<{ gameId: strin
       </Header>
       <Main>
         <Card>
-          <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-            <div style={{ fontFamily: 'var(--fonts-mono)', color: 'var(--onSurfaceVariant)', fontSize: '14px', letterSpacing: '0.2em' }}>SYS.LOG_ID // {gameId}</div>
-          </div>
+
           
           <ResultBanner status={bannerStatus}>
             <span className="material-symbols-outlined" style={{ fontSize: '40px' }}>{bannerIcon}</span>
