@@ -394,6 +394,26 @@ export default function GamePage({ params }: { params: Promise<{ gameId: string 
       showToast("Please evaluate the opponent's guess first!", "error");
       return;
     }
+
+    if (!opponentHasWon) {
+      const oppGuessStr = isHost ? currentGuess : player1CurrentGuess;
+      const mySecretStr = isHost ? secretNumber : player2Secret;
+      let trueHint = "";
+      if (oppGuessStr && mySecretStr) {
+        const opp = parseInt(oppGuessStr);
+        const sec = parseInt(mySecretStr);
+        if (!isNaN(opp) && !isNaN(sec)) {
+          if (opp < sec) trueHint = 'more';
+          else if (opp > sec) trueHint = 'less';
+          else trueHint = 'correct';
+        }
+      }
+      
+      if (trueHint && actualTurnHint !== trueHint) {
+        showToast("You selected the wrong hint! Please select the correct hint for your opponent's guess.", "error");
+        return;
+      }
+    }
     
     const haveIWon = isHost ? player2Hint === 'correct' : hint === 'correct';
     if (!haveIWon && !turnGuess) return;
